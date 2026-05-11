@@ -1,0 +1,932 @@
+[
+    {
+        "guzergah_id": "120",
+        "guzergah_kodu": "32 İB",
+        "guzergah_not": "",
+        "guzergah_adi": "İSKELE MAHALLESİ-BÖLGE HASTANESİ",
+        "gidis_baslik": "İSKELE HAREKET SAATLERİ",
+        "gidis_guzergah": "İskele-İskele Caddesi-Tebrizkapı Caddesi-Atatürk Kültür Parkı-Melen Caddesi-İpekyolu Bulvarı-Bölge Hastanesi",
+        "donus_baslik": "BÖLGE HASTANESİ HAREKET SAATLERİ",
+        "donus_guzergah": "Bölge Hastanesi-İpekyolu Bulvarı-Melen Caddesi-Atatürk Kültür Parkı-Tebrizkapı Caddesi-İskele Caddesi-İskele"
+    },
+    {
+        "guzergah_id": "121",
+        "guzergah_kodu": "42 A",
+        "guzergah_not": "",
+        "guzergah_adi": "HACIBEKİR-ŞABANİYE MAH.BÖLGE HAST.",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Depolama alanı-Doğu Caddesi-Sebze Hali-Şabaniye Caddesi-İpekyolu Bulvarı-Bölge Hastanesi",
+        "donus_baslik": "BÖLGE HASTANESİ HAREKET SAATLERİ",
+        "donus_guzergah": "Bölge Hastanesi-İpekyolu Bulvarı-Şabaniye Caddesi- Sebze Hali-Doğu Caddesi-Şerefiye Caddesi-Depolama alanı"
+    },
+    {
+        "guzergah_id": "122",
+        "guzergah_kodu": "42 B",
+        "guzergah_not": "SEFERLERİMİZ CUMARTESİ VE PAZAR GÜNLERİ UYGULANMAMAKTADIR.",
+        "guzergah_adi": "HACIBEKİR-ŞABANİYE ESKİ EDREMİT YOLU BÖLGE HAST.",
+        "gidis_baslik": "BÖLGE HASTANESİ OTOBÜS HAREKET SAATLERİ",
+        "gidis_guzergah": "Bölge Hastanesi-İpekyolu Bulvarı-Hasanbey Caddesi-Şabaniye Mezarlığı-Eski Edremit Yolu Caddesi-Sebze Hali-Doğu Caddesi-Şerefiye Caddesi-Depolama Alanı",
+        "donus_baslik": "MERKEZ HAREKET SATLERİ",
+        "donus_guzergah": "Depolama alanı-Şerefiye Caddesi-Doğu Caddesi-Sebze Hali-Eski Edremit Yolu Caddesi-Şabaniye Mezarlığı-Hasanbey Caddesi-İpekyolu Bulvarı-Bölge Hastanesi"
+    },
+    {
+        "guzergah_id": "123",
+        "guzergah_kodu": "112",
+        "guzergah_not": "",
+        "guzergah_adi": "EDREMİT-ÇİÇEKLİ-KÖPRÜLER MAH.-ÇAYIRBAŞI",
+        "gidis_baslik": "ÇİÇEKLİ KÖPRÜLER MAH. HAREKET SAATLERİ",
+        "gidis_guzergah": "Çayırbaşı-Köprüler Mah.-Çiçekli Sağlık Ocağı-Edremit-Bölge Hastanesi-İpekyolu Bulvarı-Eski Emniyet Kavşağı-Sıhke Caddesi-Beşyol-İkizler-Ters Ev-Otobüs Hareket Amirliği",
+        "donus_baslik": "MERKEZ HAREKET SAATLERİ",
+        "donus_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol Halk Eğitim Merkezi-Sıhke caddesi-Eski Emniyet Kavşağı-İpekyolu Bulvarı-Bölge Hastanesi-Edremit- Çiçekli Sağlık Ocağı- Köprüler Mah.-Çayırbaşı"
+    },
+    {
+        "guzergah_id": "124",
+        "guzergah_kodu": "113",
+        "guzergah_not": "",
+        "guzergah_adi": "EDREMİT-ÇİÇEKLİ-ANDIÇ-UĞURVEREN-ENGİNSU-MÜLK-BAKIMLI MAH.",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol Halk Eğitim Merkezi-sıhke Caddesi-Eski Emniyet Kav.-İpekyolu Bulvarı-Bölge Hastanesi-Edremit- Çiçekli Sağlık Ocağı- Andaç-Uğurveren-Enginsu-Mülk Mah.",
+        "donus_baslik": "ENGİNSU MAH. HAREKET SAATLERİ",
+        "donus_guzergah": "Enginsu-Uğurveren-Andaç-Mülk Mah.-Çiçekli Sağlık Ocağı-Edremit-Bölge Hastanesi-İpekyolu Bulvarı-Eski Emniyet Kavşağı-Sıhke Caddesi-Beşyol-İkizler-Ters Ev-Otobüs Hareket Amirliği"
+    },
+    {
+        "guzergah_id": "126",
+        "guzergah_kodu": "E-1",
+        "guzergah_not": "",
+        "guzergah_adi": "EDREMİT YENİ TOKİ-KİRACILAR TOKİ-ESKİ TOKİ-Y.Y.Ü EXSPRES HATTI",
+        "gidis_baslik": "HAFTA İÇİ EDREMİT TOKİLER SEFER SAATLERİ",
+        "gidis_guzergah": "Edremit Yeni Toki-Kiracılar Toki- Eski Toki-Nur Tatar Spor Salonu-İpekyolu Caddesi-Kocaeli Parkı- Bölge Hastanesi- Eski Emniyet Kavşağı-Otogar Kavşağı- Erciş Yolu Üzeri-Oto Sanayi Kavşağı-YYÜ Araştırma Hastanesi",
+        "donus_baslik": "HAFTA İÇİ Y.Y.Ü EXSPRES HATTI SEFER SAATLERİ",
+        "donus_guzergah": "Kampüs- Y.Y.Ü Araştırma Hastanesi-Erciş Yolu Üzeri-Oto Sanayi Kavşağı -Otogar Kavşağı-Eski Emniyet Kavşağı- Bölge Hastanesi-İpekyolu Caddesi-Kocaeli Parkı-Nur Tatar Spor Salonu-Yeni TOKİ-Kiracılar Toki-Eski Toki"
+    },
+    {
+        "guzergah_id": "129",
+        "guzergah_kodu": "121",
+        "guzergah_not": "",
+        "guzergah_adi": "EDREMİT YENİ TOKİ",
+        "gidis_baslik": "MERKEZ SEFER SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği-Çohaz Petrol-Kültür Sarayı-Hayat Hastanesi-Van Avm Kavşağı-İkinisan Caddesi-Terzioğlu Kavşağı-Bölge Hastanesi-İpekyolu Caddesi-Nur Tatar Spor Salonu-Yeni Toki",
+        "donus_baslik": "YENİ TOKİ SEFER SAATLERİ",
+        "donus_guzergah": "Yeni Toki-Nur Tatar Spor Salonu-İpekyolu Caddesi-Bölge Hastanesi-Terzioğlu Kavşağı-Eski Emniyet Kavşağı-Maraş Caddesi-Ezberciler İş Merkezi-Kültür Sarayı-Çohaz Petrol-Otobüs Hareket Amirliği"
+    },
+    {
+        "guzergah_id": "131",
+        "guzergah_kodu": "131",
+        "guzergah_not": "",
+        "guzergah_adi": "EDREMİT ESKİ TOKİ-KİRACILAR TOKİ",
+        "gidis_baslik": "MERKEZ SEFER SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği-Çohaz Petrol-Ters Ev-Kışla Yolu-Beşyol-İskele Caddesi-Yeniyol Kavşağı-Sıhke Caddesi-Eski Emniyet Kavşağı-Terzioğlu Kavşağı-Bölge Hastanesi-İpekyolu Caddesi-Kocaeli Parkı-Eski Toki-Kiracılar Toki",
+        "donus_baslik": "KİRACILAR TOKİ SEFER SAATLERİ",
+        "donus_guzergah": "Kiracılar Toki-Eski Toki-İpekyolu Caddesi-Bölge Hastanesi-Terzioğlu Kavşağı-Eski Emniyet Kavşağı-Maraş Caddesi-Ezberciler İş Merkezi-Kültür Sarayı-Çohaz Petrol-Otobüs Hareket Amirliği "
+    },
+    {
+        "guzergah_id": "136",
+        "guzergah_kodu": "211",
+        "guzergah_not": "",
+        "guzergah_adi": "EREK-ŞABANİYE",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Kültür Sarayı- Hayat Hastanesi- Van AVM-Emniyet Caddesi-Erek Meydanı-Sofubaba 1. Sokak- Şabaniye Caddesi-Şabaniye 5. Soka-Kadriye Sağdınç İ.Ö.O-Eski Edremit 4. Sokak-Çayüstü Sokak- Eski Edremit Yolu- Şabaniye Caddesi- Sebze Hali- Hacıbekir Caddesi- Cumhurriyet Caddesi- Ezberciler İş Merkezi-Kültür Sarayı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "140",
+        "guzergah_kodu": "221",
+        "guzergah_not": "",
+        "guzergah_adi": "KAVURMA MAHALLESİ MEMURSEN TOKİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Kız Meslek lisesi-Sıhke Caddesi- Eski Emniyet Kavşağı-İpekyolu Caddesi- Havaalanı Kavşağı-Sümerbank Caddesi- İşgem-Kavurma Mahallesi-Memursen Toki-Süphan Polis Lojmanları",
+        "donus_baslik": "KAVURMA MAH. MEMURSEN TOKİ SAATLERİ",
+        "donus_guzergah": "Memursen Toki-Süphan Polis Lojmanları-Kavurma Mahallesi İşgem-Sümerbank Caddesi- İpekyolu Cad- İkinisan Caddesi-Zübeyde Hanım Caddesi-Kız Meslek lisesi"
+    },
+    {
+        "guzergah_id": "142",
+        "guzergah_kodu": "241",
+        "guzergah_not": "",
+        "guzergah_adi": "ELMALIK MAHALLESİ",
+        "gidis_baslik": "ELMALIK HAREKET SAATLERİ",
+        "gidis_guzergah": "Sevgi Evleri-Elmalık-Kurtoğlu Petrol-Bölge Hastanesi-Eski Emniyet Kavşağı-Maraş Cad.-Kültür Sarayı Zaferler İÖO-Çohaz Petrol-Depolama Alanı",
+        "donus_baslik": "VAN MERKEZ HAREKET SAATLERİ",
+        "donus_guzergah": "Depolama Alanı-Çohaz Petrol-Zaferler İÖO-Kültür Sarayı-Maraş Cad.-Eski Emniyet Kavşağı-Bölge Hastanesi-Kurtoğlu Petrol-Elmalık-Sevgi Evleri"
+    },
+    {
+        "guzergah_id": "145",
+        "guzergah_kodu": "325-336",
+        "guzergah_not": "SEFERLERİMİZ PAZAR GÜNLERİ UYGULANMAYACAKTIR.",
+        "guzergah_adi": "İSKELE YALI-SELİMBEY MAHALLESİ-VAN KALESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Depolama Alanı-Kültür Sarayı-Ezberciler İş Merkezi- Maraş Cad.Eski Emniyet–Melen Cad- Kale Yolu-Atatürk Kültür Parkı- Eski Erzurum Yolu Caddesi-Erzurum Yolu 4. Sok-Van Kalesi-İskele Cad-Eski Erzurum Cad-Atatürk Kültür Parkı-Kale Yolu-Eski Emniyet Kavşağı-Maraş Caddesi-Ezberciler-Kültür Sarayı-Depolama Alanı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "148",
+        "guzergah_kodu": "352",
+        "guzergah_not": "",
+        "guzergah_adi": "EMİNPAŞA MAHALLESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Zaferler-Kültür Sarayı-Ezberciler-Şişli Öğretmen Evi-Eski Emniyet Kavş.-İpekyolu Bulvarı-Eminpaşa Caddesi-Mehmetbey Caddesi-Fidanlık Caddesi-Menekşe Sokak-İpekyolu Cad.Bölge Hast.",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "150",
+        "guzergah_kodu": "421",
+        "guzergah_not": "",
+        "guzergah_adi": "BOSTANİÇİ TOKİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Milli Egemenlik Caddesi İkizler Karşısı-Ferit Melen Bulvarı-Veteriner Caddesi-Huzur Caddesi-Bostaniçi Toki Yolu-Bostaniçi Toki",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "151",
+        "guzergah_kodu": "422",
+        "guzergah_not": "SEFERLERİMİZ PAZAR GÜNLERİ UYGULANMAMAKTADIR.",
+        "guzergah_adi": "YENİ MAHALLE- ESENLER-GÜNDOĞDU",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Depolama Alanı–Şerefiye Caddesi-Ordu Caddesi- Milli Egemenlik Caddesi-İkizler Lahmacun-Ferit Melen Bulvarı-Veteriner 2.Sokak-Dilan Sokak-Eczacılar Birliği Ortaokulu-Vadi Sokak-Yalım Erez Sokak-Okul Caddesi- Kurtuluş Caddesi-Barış Caddesi Onur Caddesi-FakiTeyran Camii-U Dönüşü Onur Caddesi-Barış Caddesi-Kurtuluş Caddesi-Okul Caddesi-Yalım Erez Sokak-Vadi Sokak-Eczacılar Birliği Ortaokulu-Dilan Sokak- Veteriner 2. Sokak – Ferit Melen Bulvarı-İkizler Lahmacun-Depolama Alanı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "152",
+        "guzergah_kodu": "423",
+        "guzergah_not": "SEFERLERİMİZ PAZAR GÜNLERİ UYGULANMAMAKTADIR.",
+        "guzergah_adi": "YALIMEREZ MAHALLESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Depolama Alanı - Şerefiye Caddesi -Astsubay Yolu Sokak - Ferit Melen Bulvarı - Kışla Yolu - Yalım Erez Sokak - Erez 8. Sokak – Ertuş Caddesi - Yalım Erez 3. Sokak - Erez 7. Sokak - Erez 11. Sokak - Mazi Sokak - Özgürlük Caddesi – Sever Sokak - Kurtuluş Caddesi - Sıhke Gölü Küme Evler Sokak - Kurtuluş Caddesi - Sever Sokak – Özgürlük Caddesi - Erez 14. Sokak - Yalım Erez Sokak - Kışla Yolu - Ferit Melen Bulvarı - Astsubay Yolu Sokak - Şerefiye Caddesi - Depolama Alanı.",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "153",
+        "guzergah_kodu": "425",
+        "guzergah_not": "",
+        "guzergah_adi": "KARPUZALAN-DEĞİRMENKÖY",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Kültür Sarayı Karşısı-Zaferler İ.Ö.O-Mareşal Fevzi Çakmak Cad.-Şerefiye Cad.-Veteriner Cad.-Barış Cad.-Karpuzalan Köy Yolu-Karpuzalan Mahallesi-Kavuncu Mahalle Yolu-Değirmenköy Mah. Yolu-Değirmenköy Mahallesi-Değirmenköy Yolu Karpuzalan Mah.-Karpuzalan Köy Yolu-Barış Cad.-Şerefiye Cad. Mareşal Fevzi Çakmak Cad.-Kültür Sarayı Karşısı-Zaferler İ.Ö.O",
+        "donus_baslik": "PAZAR GÜNÜ SEFER SAATLERİ",
+        "donus_guzergah": "Kültür Sarayı Karşısı-Zaferler İ.Ö.O-Mareşal Fevzi Çakmak Cad.-Şerefiye Cad.-Veteriner Cad.-Barış Cad.-Karpuzalan Köy Yolu-Karpuzalan Mahallesi-Kavuncu Mahalle Yolu-Değirmenköy Mah. Yolu-Değirmenköy Mahallesi-Değirmenköy Yolu Karpuzalan Mah.-Karpuzalan Köy Yolu-Barış Cad.-Şerefiye Cad. Mareşal Fevzi Çakmak Cad.-Kültür Sarayı Karşısı-Zaferler İ.Ö.O"
+    },
+    {
+        "guzergah_id": "154",
+        "guzergah_kodu": "426",
+        "guzergah_not": "",
+        "guzergah_adi": "KIRATLI MAHALLESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Ferit Melen Bulvarı.-Beşyol-Kışla Yolu-Yalım Erez Sokak- Demokrasi Caddesi-Kurtuluş Caddesi-Siyahtaş Sokak-Kıratlı Mahalle Yolu-Kıratlı Mahallesi-Kıratlı Mahalle Yolu-Siyahtaş Sokak-Kurtuluş Caddesi-Demokrasi Caddesi-Yalım Erez Sokak-Kışla Yolu-Beşyol- Ferit Melen Bulvarı-Depolama Alanı",
+        "donus_baslik": "PAZAR GÜNLERİ MERKEZ HAREKET SAATLERİ",
+        "donus_guzergah": "Ferit Melen Bulvarı.-Beşyol-Kışla Yolu-Yalım Erez Sokak- Demokrasi Caddesi-Kurtuluş Caddesi-Siyahtaş Sokak-Kıratlı Mahalle Yolu-Kıratlı Mahallesi-Kıratlı Mahalle Yolu-Siyahtaş Sokak-Kurtuluş Caddesi-Demokrasi Caddesi-Yalım Erez Sokak-Kışla Yolu-Beşyol- Ferit Melen Bulvarı-Depolama Alanı"
+    },
+    {
+        "guzergah_id": "155",
+        "guzergah_kodu": "427",
+        "guzergah_not": "CUMARTESİ-PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "ORTANCA-KÖŞEBAŞ-GÖVELEK MAHALLESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "İkizler-Milli Egemenlik Cad.-Şerefiya Cad.- Barış Cad.-Karpuzalan-Köşebaş-Gövelek-Ortanca-",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "156",
+        "guzergah_kodu": "428",
+        "guzergah_not": "SEFERLERİMİZ PAZAR GÜNLERİ UYGULANMAMAKTADIR.",
+        "guzergah_adi": "KARŞIYAKA MAHALLESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Depolama Alanı-İkizler Durağı-Mareşal Fevzi Çakmak Cad-Şerefiye Cad- Garipler Sokak-Erekdağı Caddesi-Doğu Caddesi-Menekşe Sokak-Bağlarbaşı Sokak-Rüzgar Sokak- Sönmez Sokak-Selimağa Sokak-Bağlarbaşı Sokak-Menekşe Sokak-Doğu Caddesi-Erek Dağı Caddesi-Garipler Sokak-Şerefiye Caddesi-Mareşal Fevzi Çakmak Cad-İkizler Durağı-Milli Egemenlik Cad.-Depolama Alanı-",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "157",
+        "guzergah_kodu": "431",
+        "guzergah_not": "",
+        "guzergah_adi": "KEVENLİ TOKİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Kültür Sarayı-Milli Egemenlik Caddesi-Hayat Hastanesi-Erek Dağı Caddesi-VBB-Karşıyaka Beşyol-Rahman Yolu Caddesi-Kevenli TOKİ",
+        "donus_baslik": "KEVENLİ TOKİ HAREKET SAATLERİ",
+        "donus_guzergah": "Kevenli TOKİ-Rahman Yolu Caddesi-Karşıyaka Beşyol-Erek Dağı Caddesi-VBB-Van AVM-Cumhuriyet Caddesi-Ezberciler İş Merkezi-Kültür Sarayı-"
+    },
+    {
+        "guzergah_id": "160",
+        "guzergah_kodu": "442",
+        "guzergah_not": "",
+        "guzergah_adi": "KURUBAŞ MAHALLESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Kültür Sarayı -Milli Egemenlik Caddesi-Hayat Hastanesi-Hacıbekir Caddesi-Sebze Hali Kavşağı-Hakkari Yolu-Tekstil Kent-Kurubaş Köyü Yolu-Kurubaş-Kurubaş Köyü Yolu-Hakkari Yolu-Veysel Karani Sokak-Doğu Caddesi- Sebze Hali Kavşağı-Hacıbekir Caddesi-Cumhuriyet Caddesi-Ezberciler-Kültür Sarayı",
+        "donus_baslik": "PAZAR GÜNLERİ MERKEZ HAREKET SAATLERİ",
+        "donus_guzergah": "Kültür Sarayı -Milli Egemenlik Caddesi-Hayat Hastanesi-Hacıbekir Caddesi-Sebze Hali Kavşağı-Hakkari Yolu-Tekstil Kent-Kurubaş Köyü Yolu-Kurubaş-Kurubaş Köyü Yolu-Hakkari Yolu-Veysel Karani Sokak-Doğu Caddesi- Sebze Hali Kavşağı-Hacıbekir Caddesi-Cumhuriyet Caddesi-Ezberciler-Kültür Sarayı"
+    },
+    {
+        "guzergah_id": "161",
+        "guzergah_kodu": "521",
+        "guzergah_not": "SEFERLERİMİZ PAZAR GÜNLERİ UYGULANMAMAKTADIR.",
+        "guzergah_adi": "ALTINTEPE MAHALLESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol Halk Eğitim Merkezi-Karayolları Kav.-İskele Cad.-Bediüzzaman Cad.-Tren Yolu Sok.-Şemsibey 5. Sok.-Veysel Karani Sok.-Kalecik Yolu Sok.-Can Sok-Altıntepe 3.Sok.-İskele Cad-Yeniyol-Beşyol-İkizler-Ters Ev-Otobüs Hareket Amirliği",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "162",
+        "guzergah_kodu": "540",
+        "guzergah_not": "EK ARAÇLARIMIZ CUMARTESİ-PAZAR GÜNÜ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "İKİNİSAN CADDESİ - YÜZÜNCÜ YIL ÜNİVERSİTESİ",
+        "gidis_baslik": "HAFTA İÇİ MERKEZ SEFER SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği-Çohaz Petrol-Kültür Sarayı-Hayat Hastanesi-Van AVM Kavşağı-İkinisan Caddesi-Terzioğlu Kavşağı-İpekyolu Caddesi-Eski Emniyet Kavşağı-Otogar Kavşağı-Sanayi Sitesi-YYÜ Araştırma Hastanesi-Kampüs",
+        "donus_baslik": "HAFTA İÇİ Y.Y.Ü KAMPÜS SEFER SAATLERİ",
+        "donus_guzergah": "Kampüs-YYÜ Araştırma Hastanesi--Sanayi Sitesi-Otogar Kavşağı-Eski Emniyet Kavşağı- İpekyolu Caddesi-Terzioğlu Kavşağı-İkinisan Caddesi-Van AVM Kavşağı-Hayat Hastanesi-Kültür Sarayı-Çohaz Petrol-Otobüs Hareket Amirliği "
+    },
+    {
+        "guzergah_id": "163",
+        "guzergah_kodu": "541",
+        "guzergah_not": "HAFTA SONU CUMARTESİ-PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "BEŞYOL KAMPÜS YÜZÜNCÜ YIL ÜNİVERSİTESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol -İskele Caddesi-Karayolları Kav.-Otogar-Erciş Yolu-Sanayii-YYÜ Araştırma Hastanesi-Kampüs",
+        "donus_baslik": "YYÜ HAREKET SAATLERİ",
+        "donus_guzergah": "Kampüs- YYÜ Araştırma Hastanesi- Erciş Yolu-Sanayii- Otogar- Karayolları Kav.-İskele Cad. Beşyol -İkizler-Ters Ev-Otobüs Hareket Amirliği"
+    },
+    {
+        "guzergah_id": "164",
+        "guzergah_kodu": "542",
+        "guzergah_not": "EK ARAÇLARIMIZ CUMARTESİ-PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "MARAŞ CADDESİ - YÜZÜNCÜ YIL ÜNİVERSİTESİ",
+        "gidis_baslik": "MERKEZ SEFER SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği-Çohaz Petrol-Zaferler İ.Ö.O- Kültür Sarayı- Maraş Caddesi-Eski Emniyet Kavşağı-Otogar Kavşağı-Oto Sanayi Sitesi Kavşağı-Y.Y.Ü Araştırma Hastanesi-Kampüs",
+        "donus_baslik": "Y.Y.Ü KAMPÜS SEFER SAATLERİ",
+        "donus_guzergah": "Y.Y.Ü Araştırma Hastanesi-Kampüs-Oto Sanayi Sitesi Kavşağı-Otogar Kavşağı- Eski Emniyet Kavşağı- Maraş Caddesi- Kültür Sarayı- Zaferler İ.Ö.O-Çohaz Petrol-Otobüs Hareket Amiri"
+    },
+    {
+        "guzergah_id": "165",
+        "guzergah_kodu": "543",
+        "guzergah_not": "EK ARAÇLARIMIZ CUMARTESİ-PAZAR GÜNÜ TOPLU TAŞIMA HİZMETİ VERMEMEKTEDİR.",
+        "guzergah_adi": "İSKELE MAHALLESİ-YÜZÜNCÜ YIL ÜNİVERSİTESİ",
+        "gidis_baslik": "HAFTA İÇİ MERKEZ SEFER SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol Halk Eğitim Merkezi-İskele Caddesi- Karayolları Kavşağı- İskele Caddesi-İskele-Şemsibey Caddesi-Erciş Yolu-YYÜ Araştırma Hastanesi-Kampüs",
+        "donus_baslik": "HAFTA İÇİ Y.Y.Ü. KAMPÜS SEFER SAATLERİ",
+        "donus_guzergah": "Kampüs- YYÜ Araştırma Hastanesi- Erciş Yolu-Şemsibey Caddesi-İskele-İskele Caddesi-Karayolları Kavşağı-İpekyolu Bulvarı-Eski Emniyet Kavşağı-Sıhke Caddesi-Beşyol-İkizler-Ters Ev-Otobüs Hareket Amirliği"
+    },
+    {
+        "guzergah_id": "166",
+        "guzergah_kodu": "611",
+        "guzergah_not": "EK ARAÇLARIMIZ CUMARTESİ-PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "KALECİK TOKİ",
+        "gidis_baslik": "MERKEZ SEFER SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amiri-Ters Ev-Kışla Yolu-Beşyol-İskele Caddesi-Yeni Emniyet Kavşağı-Otogar Kavşağı-Oto Sanayi Sitesi Kavşağı-Oto Açık Pazarı-Kalecik Toki-Koç Öğretmen Lojmanları",
+        "donus_baslik": "KALECİK TOKİ SEFER SAATLERİ",
+        "donus_guzergah": "Koç Öğretmen Lojmanları-Kalecik Toki-Kalecik Toki Yolu-Oto Pazarı-Sanayii Sitesi- Erciş Yolu- Otogar- Eski Emniyet Kavşağı- Sıhke Caddesi -Beşyol-İkizler-Ters Ev-Otobüs Hareket Amirliği"
+    },
+    {
+        "guzergah_id": "167",
+        "guzergah_kodu": "631",
+        "guzergah_not": "SEFERLERİMİZ PAZAR GÜNLERİ UYGULANMAMAKTADIR.",
+        "guzergah_adi": "ŞEMSİBEY MAHALLESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Depolama Alanı-Astsubay Yolu Caddesi-Beşyol- İskele Caddesi-Karayolları Kavşağı-Otogar Kav.- Erciş Yolu-Şemsibey Mahallesi-Şemsibey Mahallesi-Erciş Yolu- Otogar- Karayolları Kavşağı-Sıhke Caddesi-Beşyol-Astsubay yolu Caddesi-Depolama Alanı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "168",
+        "guzergah_kodu": "632",
+        "guzergah_not": "",
+        "guzergah_adi": "YEŞİLKÖY-TOPAKTAŞ-YURTLU-MAHALLESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Hıdırellez Caddesi-Otogar Kav.- Erciş Yolu-AMATEM-Yeşilköy-Topaktaş-Yurtlu Mah.-Dursun Odabaş Tıp Merkezi-Erciş Yolu- Sanayii Sitesi- Otogar- Karayolları Kavşağı-Sıhke Caddesi-Beşyol",
+        "donus_baslik": "PAZAR GÜNÜ SEFER SAATLERİ",
+        "donus_guzergah": "Hıdırellez Caddesi-Otogar Kav.- Erciş Yolu-AMATEM-Yeşilköy-Topaktaş-Yurtlu Mah.-Dursun Odabaş Tıp Merkezi-Erciş Yolu- Sanayii Sitesi- Otogar- Karayolları Kavşağı-Sıhke Caddesi-Beşyol"
+    },
+    {
+        "guzergah_id": "169",
+        "guzergah_kodu": "635",
+        "guzergah_not": "",
+        "guzergah_adi": "ORGANİZE SANAYİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol-Sıhke Caddesi-Eski Emniyet Kavşağı-Otogar Kavşağı-Oto Sanayi Kavşağı-Organize Sanayi-Organize Sanayi-Oto Sanayi Kavşağı-Otogar Kavşağı-Eski Emniyet Kavşağı-Sıhke Caddesi-Beşyol-İkizler-Ters Ev-Otobüs Hareket Amirliği",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "170",
+        "guzergah_kodu": "641",
+        "guzergah_not": "EK SEFERLERİMİZ CUMARTESİ-PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "F-TİPİ CEZAEVİ (YYÜ TOKİ)",
+        "gidis_baslik": "MERKEZ SEFER SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol Halk Eğitim Merkezi-İskele Caddesi-Otogar-Sanayi Sitesi-Erciş Yolu-YYÜ Araştırma Hastanesi- Bardakçı TOKİ-AMATEM-Van Tarım Meslek Lisesi- F Tipi Cezaevi",
+        "donus_baslik": "F-TİPİ (YYÜ TOKİ) SEFER SAATLERİ",
+        "donus_guzergah": "F-Tipi Cezaevi-Yumrutepe Mahallesi yol ayrımı-Van Tarım Meslek Lisesi-AMATEM-Bardakçı Toki-YYÜ Araştırma Hastanesi-Erciş Yolu- Sanayi Sitesi-Otogar - Eski Emniyet Kavşağı- Sıhke Caddesi-Beşyol-İkizler-Ters Ev-Otobüs Hareket Amirliği"
+    },
+    {
+        "guzergah_id": "172",
+        "guzergah_kodu": "645",
+        "guzergah_not": "CUMARTESİ-PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "KASIMOĞLU-DİLİMLİ-SATIBEY-KOÇKÖY-ADIGÜZEL",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol-Muzy Durağı-Koçibey Caddesi-Hıdırelyez Caddesi-Otogar-Erciş Yolu-AMATEM-Yumrutepe-Köprüköy-Otluca-Kasımoğlu-Dilimli-Satıbey-Koçköy-Adıgüzel",
+        "donus_baslik": "ADIGÜZEL HAREKET SAATLERİ",
+        "donus_guzergah": "Otluca-Köprüköy-Yumrutepe-Erciş yolu-AMATEM-Otogar-Karayolları Kavşağı-Eski Emniyet Kavşağı-Sıhke Cad.-Beşyol-İkizler-Ters Ev-Otobüs Hareket Amirliği"
+    },
+    {
+        "guzergah_id": "173",
+        "guzergah_kodu": "651",
+        "guzergah_not": "",
+        "guzergah_adi": "ATMACA-ALAKÖY-AYANIS-MOLLAKASIM",
+        "gidis_baslik": "ATMACA-ALAKÖY-AYANIS-MOLLAKASIM",
+        "gidis_guzergah": "Akköprü Deresi-Hıdırellez Cad.-Otogar -Eciş yolu-AMATEM--F Tipi Cezaevi-Atmaca-Alaköy-Ayanıs-Mavi Bayraklı Plaj-Mollakasım Mahallesi-Alaköy Mah.-F Tipi Ceza Evi-AMATEM-Erciş Yolu- Otogar Kavşağı-Karayolları Kavşağı-Eski Emn.Kav.-Sıhke Cad-Beşyol",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "174",
+        "guzergah_kodu": "652",
+        "guzergah_not": "",
+        "guzergah_adi": "DİBEKDÜZÜ-ARISU-ÇİTÖREN-ESKİ TOPAKTAŞ-BARDAKÇI MAHALLESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Akköprü Deresi-Hıdrellez Cad.-Erciş Yolu -Otogar-YYÜ Dursun Odabaş -Eski Topaktaş Mah-Arısu Mah-Dibekdüzü Mah.Arısu Mah.-Topaktaş Mah.-Bardakçı Mah.-YYÜ Dursun Odabaş- Erciş Yolu - Otogar Kavşağı-Karayolları Kavşağı-Eski Emn.Kav.-Sıhke Cad-Beşyol",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "175",
+        "guzergah_kodu": "655",
+        "guzergah_not": "",
+        "guzergah_adi": "GÖLLÜ-GÜVEÇLİ-YEŞİLSU-DAĞÖNÜ-ÖZYURT",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Depolama Alanı-Astsubay yolu Caddesi-Beşyol-İskele Cad.-Karayolları Kav.-Erciş Yolu-AMATEM-F Tipi Cezaevi-Göllü-Güveçli-Yeşilsu-Dağönü Mah.-Özyurt Mah.Yeşilsu-Güveçli-Göllü-F Tipi Ceza Evi-AMATEM-Erciş Yolu- Otogar Kavşağı-Karayolları Kavşağı-Sıhke Cad.- Beşyol-Astsubay Yolu Caddesi-Depolama Alanı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "176",
+        "guzergah_kodu": "710",
+        "guzergah_not": "SEFERLERİMİZ PAZAR GÜNLERİ UYGULANMAMAKTADIR.",
+        "guzergah_adi": "İSTASYON MAHALLESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol Kavşağı - İskele Caddesi-Karayolları Kavşağı-İpekyolu Caddesi-Otogar Kavşağı -Terminal Caddesi-İstasyon Caddesi -Seyrantepe Mezarlığı-Şair İzi Sokak - Seyhan Sokak-U Dönüşü-Seyhan Sokak -Şair İzi Sokak -İstasyon Caddesi -Terminal Caddesi-Otogar Kavşağı -İpekyolu Caddesi-Karayolları Kavşağı –Eski Emniyet Kavşağı Sıhke Caddesi Beşyol -İkizler-Ters Ev-Otobüs Hareket Amirliği",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "177",
+        "guzergah_kodu": "721",
+        "guzergah_not": "SEFERLERİMİZ PAZAR GÜNLERİ UYGULANMAMAKTADIR.",
+        "guzergah_adi": "SEYRANTEPE MAHALLESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol Halk Eğitim Merkezi-İskele Cad.-İpekyolu Bulvarı-Otogar-Özalp Yolu-Beyüzümü Cad.-Averek Yolu-Averek 10.Sok.-Düzyol 1.Sok.Düzyol 12. Sok.-Düzyol Cad.-Marangozcular Sitesi-Tren Yolu Sok.-Düzyol 4. Sokak-Beyüzümü Caddesi-Otogar -Karayolları Kav.-Eski Emniyet Kav.-Sıhke Cad.-Beşyol-İkizler-Ters Ev-Otobüs Hareket Amirliği",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "178",
+        "guzergah_kodu": "741",
+        "guzergah_not": "",
+        "guzergah_adi": "SIHKE TOKİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol Halk Eğitim Merkezi-Koçibey Caddesi-İpekyolu Bulvarı-Otogar-Özalp Yolu-Kömürcüler Sitesi- Sıhke TOKİ",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "179",
+        "guzergah_kodu": "115",
+        "guzergah_not": "",
+        "guzergah_adi": "AKDAMAR ADASI-BALABAN",
+        "gidis_baslik": "BALABAN HAREKET SAATLERİ",
+        "gidis_guzergah": "Balaban-Akdamar Adası-Gevaş-Edremit Çarşı-Kocaeli Parkı--Bölge Hastanesi--İpekyolu Bulvarı-Eski Emniyet Kav.-Maraş Caddesi--Zaferler İÖO-Depolama Alanı",
+        "donus_baslik": "MERKEZ HAREKET SAATLERİ",
+        "donus_guzergah": "Depolama Alanı-Zaferler İÖO-Maraş Caddesi-Eski Emniyet Kav.-İpekyolu Bulvarı-Bölge Hastanesi-Kocaeli Parkı-Edremit Çarşı-Gevaş-Akdamar Adası-Balaban"
+    },
+    {
+        "guzergah_id": "180",
+        "guzergah_kodu": "ÇL1",
+        "guzergah_not": "",
+        "guzergah_adi": "ÇALDIRAN VAN OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "VAN MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Otogar-Erciş Yolu Cad.-YYÜ Kavşağı-Erciş Van Yolu-Erciş Muradiye Yol Ayrımı-Van Doğubeyazıt Yolu-Muradiye Kavşağı- Çaldıran",
+        "donus_baslik": "ÇALDIRAN HAREKET SAATLERİ",
+        "donus_guzergah": "ÇaldıranVan Doğubeyazıt Yolu -Muradiye Kavşağı- Erciş Muradiye Yol Ayrımı-Van Erciş Yolu-YYÜ Kavşağı-Erciş Yolu Cad.-Otogar"
+    },
+    {
+        "guzergah_id": "181",
+        "guzergah_kodu": "ÇT-1",
+        "guzergah_not": "",
+        "guzergah_adi": "VAN ÇATAK OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Otogar-Eski Emniyet Kavşağı-İpekyolu Cad.-Bölge Hastanesi-Edremit-Çiçekli-Kızıltaş Mahallesi -Görentaş Mahallesi-Çatak",
+        "donus_baslik": "ÇATAK HAREKET SAATLERİ",
+        "donus_guzergah": "Çatak-Görentaş Mahallesi-Kızıltaş Mahallesi-Çiçekli-Edremit-Bölge Hastanesi-İpekyolu Cad-Eski Emniyet Kavşağı-Otogar"
+    },
+    {
+        "guzergah_id": "182",
+        "guzergah_kodu": "GR1",
+        "guzergah_not": "",
+        "guzergah_adi": "GÜRPINAR VAN OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "VAN MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Depolama Alanı-Zaferler İÖO-Kültür Sarayı Kavşağı-Milli Egemenlik Cad.- Hayat Hastanesi Doğu Caddesi-İkinisan Kavşağı-Hacıbekir Bulvarı-Van Hakkarı Yolu- Kurubaş-Tekstilkent- Gürpınar Hakkarı Yol Ayrımı-Bitlis Hakkari Yolu-Gürpınar",
+        "donus_baslik": "GÜRPINAR HAREKET SAATLERİ",
+        "donus_guzergah": "Gürpınar-Bitlis Hakkari Yolu- Gürpınar Hakkarı Yol Ayrımı--Tekstilkent- Kurubaş-Hacıbekir Bulvarı-İkinisan Kavşağı-Milli Egemenlik Cad.- Hayat Hastanesi-Zaferler İÖO-Depolama Alanı"
+    },
+    {
+        "guzergah_id": "183",
+        "guzergah_kodu": "GV1",
+        "guzergah_not": "",
+        "guzergah_adi": "VAN GEVAŞ OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Otogar- İpekyolu Caddesi-Bölge Hastanesi-Edremit İlçesi-Çiçekli- Van Bitlis Yolu- Gevaş Yol Ayrımı-Atatürk Bulvarı-Gevaş",
+        "donus_baslik": "GEVAŞ HAREKET SAATLERİ",
+        "donus_guzergah": "Gevaş-Gevaş Yol Ayrımı-- Van Bitlis Yolu--Çiçekli--Edremit İlçesi--Bölge Hastanesi-- İpekyolu Caddesi-Otogar"
+    },
+    {
+        "guzergah_id": "184",
+        "guzergah_kodu": "MR1",
+        "guzergah_not": "",
+        "guzergah_adi": "MURADİYE VAN OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "VAN MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Otogar-Erciş Yolu Cad.-YYÜ Kavşağı-Erciş Van Yolu-Erciş Muradiye Yol Ayrımı-Van Doğubeyazıt Yolu-Muradiye Kavşağı- Muradiye",
+        "donus_baslik": "MURADİYE HAREKET SAATLERİ",
+        "donus_guzergah": "Muradiye-Muradiye Kavşağı- Erciş Muradiye Yol Ayrımı-Van Erciş Yolu-YYÜ Kavşağı-Erciş Yolu Cad.-Otogar"
+    },
+    {
+        "guzergah_id": "185",
+        "guzergah_kodu": "ÖZ-1",
+        "guzergah_not": "",
+        "guzergah_adi": "ÖZALP VAN OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "VAN MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Makine İkmal Garajı-İpekyolu Cad-Eski Emniyet Kav.-Karayolları Kav.- Otogar-Özalp Yolu Cad.-Erçek-Özalp-Özalp Saray Yolu-Saray",
+        "donus_baslik": "ÖZALP HAREKET SAATLERİ",
+        "donus_guzergah": "Saray-Özalp Saray Yolu-Özalp -Erçek-Özalp Yolu-Otogar"
+    },
+    {
+        "guzergah_id": "186",
+        "guzergah_kodu": "SR1",
+        "guzergah_not": "",
+        "guzergah_adi": "SARAY VAN OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "VAN HAREKET SAATLERİ",
+        "gidis_guzergah": "Makine İkmal Garajı-İpekyolu Cad-Eski Emniyet Kav.-Karayolları Kav.-Otogar-Özalp Yolu Cad.-Erçek-Özalp Kavşağı-Özalp Saray Yolu-Saray-Saray Devlet Hast.",
+        "donus_baslik": "SARAY HAREKET SAATLERİ",
+        "donus_guzergah": "Saray Devlet Hast-Saray-Özalp Saray Yolu-Özalp Kavşağı-Erçek-Özalp Yolu-Otogar"
+    },
+    {
+        "guzergah_id": "188",
+        "guzergah_kodu": "101",
+        "guzergah_not": "",
+        "guzergah_adi": "ERCİŞ İLÇESİ YUKARI TOKİ OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "ERCİŞ TOPLAMA MERKEZİ HAREKET SAATLERİ",
+        "gidis_guzergah": "Erciş Merkez-Yeni Hastane-Viar Durağı-Van Yolu-Erciş Van Yolu-Oto Sanayi-Haydarbey Kavşağı-Yukarı Toki-Adnan Menderes Mah. U Dönüşü Haydabey Kavşağı-Oto Sanayi- Erciş Van Yolu-Van Yolu Caddesi-Viar Durağı-Depolama Alanı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "189",
+        "guzergah_kodu": "102",
+        "guzergah_not": "",
+        "guzergah_adi": "ERCİŞ İLÇESİ AŞAĞI TOKİ OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "ERCİŞ TOPLAMA MERKEZİ HAREKET SAATLERİ",
+        "gidis_guzergah": "Erciş Merkez-Yeni Hastane-Viar Durağı-Van Yolu-Erciş Van Yolu-Oto Sanayi-Karadaşlar Mevkii- Emniyet Müdürlüğü-Aşağı Toki-Öğretmenler Evi- U dönüşü-Toki Yolu –Emniyet Amirliği—Oto Sanayi- Erciş Van Yolu-Van Yolu Caddesi-Viar Durağı- Depolama alanı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "190",
+        "guzergah_kodu": "201",
+        "guzergah_not": "",
+        "guzergah_adi": "HAYDARBEY KADİRASKER OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Eski Ruspazarı-Depolama Alanı-Viar Durağı-Van Yolu-Eski Hastane - Karataşlar-Sanayi Sitesi-Haydarbey Mahallesi-Kadir Asker Mahallesi U Dönüşü",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "191",
+        "guzergah_kodu": "210",
+        "guzergah_not": "PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "ERGÜCÜ-DELİÇAY-KEKLİKOVA-SALMANAĞA-ÇOBANDÜZÜ OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Zeylan Caddesi-Yeni Belediye Binası-Tugay Yolu-Tugay-Keklikova Mahallesi-Ergücü Mahallesi U Dönüşü-Salmanağa-Çobandüzü",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "192",
+        "guzergah_kodu": "301",
+        "guzergah_not": "PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "YUKARI IŞIKLI-AFAT EVLERİ OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Dalan Caddesi-Manolya Pastanesi-Zeylan Caddesi Simeklioğlu Kavşağı- Aşağı Işıklı - Afat Evleri-U Dönüşü",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "193",
+        "guzergah_kodu": "305-813",
+        "guzergah_not": "PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "SOLAHA OYALI OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Dalan Caddesi Manolya Pastanesi - Yeni Belediye Binası - Tugay Yolu- Solaha Mahallesi - Karayolları Şube Müdürlüğü - Erciş Patnos Yolu - Depolama Alanı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "194",
+        "guzergah_kodu": "310",
+        "guzergah_not": "PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "KOZLUCA-SALİHİYE OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Depolama Alanı-Hükümet Konağı arakası-Yeni Belediye Binası-Tugay Yolu-Salihiye Kanalboyu-Erciş Van Yolu-Yeni Belediye Binası-Atakan Çelik Caddesi –Depolama Alanı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "195",
+        "guzergah_kodu": "410",
+        "guzergah_not": "PAPAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "PAYKÖY-TIRMIKLI OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Yeni Belediye-Tugay Caddesi-Açık Cezaevi-Keklikova-Payköy-Tırmıklı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "196",
+        "guzergah_kodu": "501",
+        "guzergah_not": "PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "KOCAPINAR ÇETİNTAŞ OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "KOCAPINAR ÇETİNTAŞ HAREKET SAATLERİ",
+        "gidis_guzergah": "Dalan Caddesi - Manolya Pastanesi - Otogar - Aşağı Işıklı- Gözü Tok Mahallesi - Karamellik Mahallesi - Ekiciler Mahallesi - Ağbaş Mahallesi - Çoban düzü Mahallesi - Kocapınar Mahallesi - Çetintaş Mahallesi U Dönüşü",
+        "donus_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "donus_guzergah": "Dalan Caddesi - Manolya Pastanesi - Otogar - Aşağı Işıklı- Gözü Tok Mahallesi - Karamellik Mahallesi - Ekiciler Mahallesi - Ağbaş Mahallesi - Çoban düzü Mahallesi - Kocapınar Mahallesi - Çetintaş Mahallesi U Dönüşü"
+    },
+    {
+        "guzergah_id": "197",
+        "guzergah_kodu": "601",
+        "guzergah_not": "PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "ÇELEBİBAĞI KÖYİÇİ SONDURAK-BAYRAMLI OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Erciş Merkez -Askerlik Şubesi-Kışla Yolu-Örenedemi Mevkii-Çelebibağ Yol Boyu - Son Durak - Köy İçi-Bayramlı-Depolama Alanı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "199",
+        "guzergah_kodu": "603",
+        "guzergah_not": "",
+        "guzergah_adi": "ÇELEBİBAĞI AĞAMSAT OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Askerlik Şubesi-Kışla Yolu-Örene Yolu-H.Süleyman Kavşağı-Ağamast Yolu-Kanya Zınır(Güllü Bulak) U Dönüşü",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "200",
+        "guzergah_kodu": "604",
+        "guzergah_not": "PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "ÇELEBİBAĞI AFAT EVLERİ-ÇATAKDİBİ-ÖRENEDEMİ OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Askerlik Şube Arkası - Kışla Caddesi - Örene Yolu -Çatakdibi- İkizler Market - Taviş Market - Cangoran Yolu - Kasım bağı Afat Evleri - Çelebibağ Afat Evleri - Çepele Lisesi - Jandarma Karakolu - Adilcevaz Yolu-Kışla Yolu - Askerlik Şubesi",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "202",
+        "guzergah_kodu": "701",
+        "guzergah_not": "",
+        "guzergah_adi": "TEKEVLER ALKANAT OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Depolama Alanı Viar Arkası- Eski Cacık Meydanı-Tekevler Mahallesi-Ğergin Çukuru-Deniz Mahallesi-Med Tıp Merkezi-Eski Hastane –Yeni Hastane-Depolama Alanı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "204",
+        "guzergah_kodu": "720",
+        "guzergah_not": "PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "ÇINARLI-HURDACILAR OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Çınarlı Caddesi- Şahin Tepe- Kasımbağı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "206",
+        "guzergah_kodu": "815-503",
+        "guzergah_not": "PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "YEŞİLOVA -UNCULAR OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Dalan Caddesi- Manolya Pastanesi-Askerlik Şubesi Kışla Yolu Mal Meydanı Mezbaa Yolu- Nato Yolu Yeşilova Mahallesi Süleyman Erdinç Caddesi Depolama Alanı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "207",
+        "guzergah_kodu": "643",
+        "guzergah_not": "CUMARTESİ-PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "HIDIR AKÇAÖREN",
+        "gidis_baslik": "AKÇAÖREN HAREKET SAATLERİ",
+        "gidis_guzergah": "Akçaören-Yemlice-Ocaklı-Hıdır-Otluca-Gülsünler-Köprüköy-Özkaynak-Yumrutepe-AMATEM-Erciş yolu-Otogar-Karayolları Kav.-Eski Emniyet-Sıhke Cad.-Beşyol-İkizler-Ters Ev-Otobüs Hareket Amirliği",
+        "donus_baslik": "MERKEZ HAREKET SAATLERİ",
+        "donus_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol-Muzy Durağı-Koçibey Caddesi-Hıdırelyez Caddesi-Otogar-Erciş Yolu-AMATEM-Yumrutepe-Özkaynak-Köprüköy-Gülsünler-Otluca-Hıdır-Ocaklı- Yemlice-Akçaören-"
+    },
+    {
+        "guzergah_id": "208",
+        "guzergah_kodu": "634",
+        "guzergah_not": "",
+        "guzergah_adi": "BARDAKÇI TOKİ-TUŞBA TOKİ",
+        "gidis_baslik": "BARDAKÇI TOKİ-TUŞBA TOKİ HAREKET SAATLERİ",
+        "gidis_guzergah": "Tuşba Toki-Bardakçı Toki -Araştırma Hast.-Erciş Yolu-Otogar Kav - Karayolları Kavşağı-Eski Emniyet Kav.-Sıhke Caddesi-Beşyol-İkizler-Ters Ev-Otobüs Hareket Amirliği",
+        "donus_baslik": "MERKEZ HAREKET SAATLERİ",
+        "donus_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol -Muzzy Durağı-Sıhke Caddesi-Eski Emn, Kav-Karayolları Kav.-Otogar Kav.- Erciş Yolu-Araştırma Hast. Bardakçı Toki-Tuşba Toki"
+    },
+    {
+        "guzergah_id": "209",
+        "guzergah_kodu": "800-802",
+        "guzergah_not": "",
+        "guzergah_adi": "ERÇEK-KARAGÜNDÜZ MAHALLESİ",
+        "gidis_baslik": "SEFER SAATLERİ",
+        "gidis_guzergah": "Gidiş Güzergahı:Otobüs Hareket Amirliği- Astsubay Caddesi-İkizler-Beşyol-Defterdarlık Caddesi-Hıdırellez Caddesi-Otogar Kavşağı-Özalp Saray Yolu-Erçek Mahallesi-Karagündüz Mahallesi Dönüş Güzergahı:Karagündüz Mahallesi-Erçek Mahallesi-Özalp Saray Yolu-Otogar Kavşağı-Eski Emniyet Kavşağı-Sıhke Cad-Beşyol-İkizler-Astubay Caddesi-Otobüs Hareket Amirliği",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "210",
+        "guzergah_kodu": "120",
+        "guzergah_not": "",
+        "guzergah_adi": "EDREMİT MERKEZ ESKİ TOKİ KİRACILAR TOKİ YENİ TOKİ",
+        "gidis_baslik": "EDREMİT MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Edremit Merkez-Kocaeli Parkı-Seyir Tepesi-Eski Toki-Kiracılar Toki-Yeni Toki-Edremit Mahalleiçi",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "212",
+        "guzergah_kodu": "502-505-503",
+        "guzergah_not": "PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "PINARLI-AKBAŞ-UNCULAR",
+        "gidis_baslik": "PINARLI HAREKET SAATLERİ",
+        "gidis_guzergah": "Dalan Caddesi - Manolya Pastanesi - Otogar - Aşağı Işıklı-Ekiciler Mahallesi -Kocapınar Mahallesi -Yetişen-Pınarlı Mahallesi",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "213",
+        "guzergah_kodu": "812-503",
+        "guzergah_not": "PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "HASANABDAL-UNCULAR",
+        "gidis_baslik": "HASANABDAL OTOBÜS HAREKET SAATLERİ",
+        "gidis_guzergah": "Zeylan Cad-Simeklioğlu Petrol-Y.Işıklı-Oyalı-Hacıkaş-Çakırbey-İşbaşı-Hasanabdal-Ilıca",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "214",
+        "guzergah_kodu": "202",
+        "guzergah_not": "",
+        "guzergah_adi": "ERCİŞ-ÜNSELİ-MURADİYE",
+        "gidis_baslik": "ERCİŞ-ÜNSEL-MURADİYE-HAREKET SAATLERİ",
+        "gidis_guzergah": "Erciş-Ünseli-Muradiye",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "215",
+        "guzergah_kodu": "BF-100",
+        "guzergah_not": "SEFERLERİMİZ PAZAR GÜNLERİ UYGULANMAMAKTADIR.",
+        "guzergah_adi": "BÖLGE HASTANESİ-YYÜ HASTANESİ-F TİPİ CEZA EVİ",
+        "gidis_baslik": "BÖLGE HASTANESİ HAREKET SAATLERİ",
+        "gidis_guzergah": "Bölge Hastanesi-İpekyolu Caddesi-Emniyet Kav.-Otogar Kavşağı- Erciş Yolu-YYÜ Araştırma Hastanesi- Amatem-Çematem-F Tipi Cezaevi-Yumrutepe",
+        "donus_baslik": "F TİPİ CEZA EVİ HAREKET SAATLERİ",
+        "donus_guzergah": "Yumrutepe-F Tipi Cezaevi- Amatem/Çematem-YYÜ Araştırma Hastanesi-Erciş Yolu-Otogar Kavşağı- Emniyet Kav.-İpekyolu Caddesi-Bölge Hastanesi"
+    },
+    {
+        "guzergah_id": "217",
+        "guzergah_kodu": "BK-400",
+        "guzergah_not": "CUMARTESİ VE PAZAR GÜNLERİ HİZMET VERİLMEMEKTEDİR.",
+        "guzergah_adi": "BOSTANİÇİ TOKİ-KAMPÜS",
+        "gidis_baslik": "BOSTANİÇİ TOKİ HAREKET SAATLERİ",
+        "gidis_guzergah": "1.GÜZERGÂH- Bostaniçi Toki-Veteriner Caddesi-İkizler-Sıhke Cad-Emniyet Kavşağı-Otogar Kavşağı-Sanayi Kavşağı-Erciş Yolu-YYÜ AraştırmaHastanesi-Kampüs • 2.GÜZERGÂH- Bostaniçi Toki-Huzur Caddesi-Barış Caddesi-Şerefiye Yeni Mah. - Demir Köprü-Orhan Doğan Cad.- Nuda Kültür Merkezi- Sebze Hali- Şabaniye Cad- İpekyolu Cad-Eski Emniyet Kavşağı-Otogar Kavşağı-Erciş Yolu Üzeri-Kampüs",
+        "donus_baslik": "YYÜ KAMPÜS HAREKET SAATLERİ",
+        "donus_guzergah": "1.GÜZERGÂH-Kampüs-YYÜ Araştırma Hastanesi-Erciş Yolu-Sanayi Kavşağı--Otogar Kavşağı-Eski Emniyet Kavşağı-Sıhke Cad-İkizler-Veteriner Caddesi-Bostaniçi Toki- •\t2.GÜZERGÂH- Kampüs -Erciş Yolu Üzeri-Otogar Kavşağı-Eski Emniyet Kavşağı-İpekyolu Cad-Vaski-Şabaniye Cad-Sebze Hali- Nuda Kültür Merkezi-Orhan Doğan Cad.-Demir Köprü-YeniMah. Şerefiye-Barış Caddesi-Huzur Caddesi-Bostaniçi Toki"
+    },
+    {
+        "guzergah_id": "220",
+        "guzergah_kodu": "OB-650",
+        "guzergah_not": "CUMARTESİ VE PAZAR GÜNLERİ SEFERLERİMİZ UYGULANMAMAKTADIR.",
+        "guzergah_adi": "OTOGAR-BÜYÜKŞEHİR BELEDİYESİ",
+        "gidis_baslik": "OTOGAR HAREKET SAATLERİ",
+        "gidis_guzergah": "OTOGAR-ESKİ MEYDAN KAVŞAĞI-MARANGOZLAR SİTESİ-ÇALI DURAĞI-İSKELE CADDESİ-YENİ EMNİYET KAVŞAĞI-SEMAVER KAVŞAĞI-SIHKE CADDESİ-BEŞYOL-İKİZLER-KÜLTÜR KAVŞAĞI-HAYAT HASTANESİ-EREK DAĞI CADDESİ- BÜYÜKŞEHİR BELEDİYESİ",
+        "donus_baslik": "BÜYÜKŞEHİR BELEDİYESİ HAREKET SAATLERİ",
+        "donus_guzergah": "BÜYÜKŞEHİR BELEDİYESİ-EREK DAĞI CADDESİ-HAYAT HASTANESİ-KÜLTÜR KAVŞAĞI-İKİZLER-BEŞYOL-SIHKE CADDESİ-SEMAVER KAVŞAĞI-ESKİ EMNİYET KAVŞAĞI-OTOGAR"
+    },
+    {
+        "guzergah_id": "221",
+        "guzergah_kodu": "610",
+        "guzergah_not": "PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "KARLIYAYLA-ÇİMEN",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Erciş Merkez-Çelebibağı-Tekler-Çimen-Karlıyayla-Bayramlı Yol Ayrımı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "224",
+        "guzergah_kodu": "801",
+        "guzergah_not": "CUMARTESİ-PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "ILIKAYNAK-AŞAĞI VE YUKARI GÖLALAN",
+        "gidis_baslik": "HAREKET SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol-Muzy Durağı-Koçibey Caddesi-Hıdırelyez Caddesi-Otogar -Özalp Saray Yolu-Erçek-Ilıkaynak-Aşağıgölalan-Yukarı Gölalan-Yukarı Gölalan-Aşağıgölalan-Ilıkaynak-Erçek-Özalp Saray Yolu- Otogar Kavşağı-Karayolları Kavşağı-Eski Emn. Kav.-Sıhke Cad-Beşyol-İkizler-Ters Ev-Otobüs Hareket Amirliği",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "226",
+        "guzergah_kodu": "657",
+        "guzergah_not": "CUMARTESİ-PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "GENDELOVA-ÇOMAKLI-KOZLUCA-YALNIZAĞAÇ",
+        "gidis_baslik": "HAREKET SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol-Alipaşa Mah.-Otogar -Özalp Saray Yolu-Gendelova-Çomaklı-Kozluca-Yalnızağaç",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "228",
+        "guzergah_kodu": "658-659",
+        "guzergah_not": "CUMARTESİ-PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "ESENPINAR-HALKALI-YAYLIYAKA-ŞAHGELDİ-TABANLI-PİRGARİP",
+        "gidis_baslik": "HAREKET SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol-Muzy Durağı-Koçibey Caddesi-Hıdırelyez Caddesi-Erciş Yolu Üzeri-Otogar-Sanayi Sitesi-Organize Kavşağı-F-Tipi Cezaevi-Alaköy Kavşağı-Esenpınar-Halkalı-Yaylıyaka-Şahgeldi-Tabanlı-Pirgarip-Şahgeldi-Tabanlı-Pirgarip-Yaylıyaka-Halkalı-Esenpınar-Alaköy Kavşağı-F-Tipi Cezaevi-Organize Kavşağı-Sanayi Sitesi-Otogar-Eski Emniyet Kavşağı-Sıhke Caddesi-Beşyol-İkizler-Ters Ev-Otobüs Hareket Amirliği",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "229",
+        "guzergah_kodu": "117",
+        "guzergah_not": "CUMARTESİ-PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "ÇAVUŞTEPE-ZERNEK-HOŞAP",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Harket Merkezi-Zaferler İÖO-Kültür Sarayı Kavşağı- Milli Egemenlik Cad.- Hayat Hastanesi Doğu Caddesi-İkinisan Kavşağı-Hacıbekir Bulvarı-Van Hakkarı Yolu- Kurubaş-Tekstilkent- Gürpınar-Çavuştepe-Zernek Barajı-Hoşap",
+        "donus_baslik": "HOŞAP HAREKET SAATLERİ",
+        "donus_guzergah": "Hoşap-Zernek Barajı-Çavuştepe-Gürpınar-Tekstilkent-Kurubaş-Van Hakkarı Yolu-Hacıbekir Bulvarı-İkinisan Kavşağı-Doğu Caddesi- Hayat Hastanesi - Milli Egemenlik Cad.-Kültür Sarayı Kavşağı-Zaferler İÖO- Depolama Alanı-"
+    },
+    {
+        "guzergah_id": "230",
+        "guzergah_kodu": "100",
+        "guzergah_not": "",
+        "guzergah_adi": "VAN BAŞKALE",
+        "gidis_baslik": "HAREKET SAATLERİ",
+        "gidis_guzergah": "Gidiş Güzergahı:Otogar-Eski Emniyet Kavşağı-Çatak Durağı-Şabaniye Caddesi- Kurubaş- Zernek Barajı-Hoşap-Albayrak Yol Ayrımı-Başkale Dönüş Güzergahı:Başkale-Albayrak Yol Ayrımı-Hoşap- Zernek Barajı-Kurubaş--Şabaniye Caddesi-Çatak Durağı-Eski Emniyet Kavşağı-Otogar",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "231",
+        "guzergah_kodu": "811",
+        "guzergah_not": "PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "LATİFİYE-YÜNÖREN-İKİZÇALI-KÖMÜR-YILANLI-ÇAKIRBEY",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Latifiye-Zeylan Cad-Simeklioğlu Petrol-Yukarı Işıklı-Çakırbey-İkizçalı-Yünören-Kömür-Yılanlı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "232",
+        "guzergah_kodu": "503",
+        "guzergah_not": "PAZAR GÜNLERİ HİZMET VERİLMEMEKTEDİR",
+        "guzergah_adi": "UNCULAR",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Zeylan Cad-Simeklioğlu Petrol-Aşağı Işıklı-Ekinci-Uncular",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "233",
+        "guzergah_kodu": "505",
+        "guzergah_not": "PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "AKBAŞ-KÜPLÜ",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Dalan Caddesi - Manolya Pastanesi -Latifiye- Otogar - Aşağı Işıklı-Ekiciler Mahallesi -Akbaş-Küplü",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "234",
+        "guzergah_kodu": "813",
+        "guzergah_not": "PAZAR GÜNLERİ HİZMET VERİLMEMEKTEDİR",
+        "guzergah_adi": "OYALI DERİMEVİ",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Zeylan Cad-Simeklioğlu Petrol-Y.Işıklı-Oyalı-Derimevi",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "235",
+        "guzergah_kodu": "660",
+        "guzergah_not": "CUMARTESİ-PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "GEDİKBULAK-DEREBEY-BAĞDAŞAN-KARAAĞAÇ-ERMİŞLER",
+        "gidis_baslik": "HAREKET SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol-Muzy Durağı-Koçibey Caddesi-Hıdırelyez Caddesi-Erciş Yolu-Otogar-Sanayi Sitesi Kav-Organize Kav.-YYÜ Hast.Kav-F Tipi C.Evi-Alaköy Kav-Bağdaşan-Karaağaç-Ermişler-Gedikbulak-Derebey",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "238",
+        "guzergah_kodu": "BHÇ-1",
+        "guzergah_not": "SEFERLERİMİZ PAZAR GÜNLERİ UYGULANMAMAKTADIR.",
+        "guzergah_adi": "VAN BAHÇESARAY OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "VAN MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Depolama Alanı-Çohaz Petrol Kavşağı-Kültür Sarayı-Van Avm Kavşağı Hacıbekir Caddesi-Şabaniye Caddesi-Çatak Durağı-Bölge Hastanesi-Edremit-Çiçekli-Gürpınar Yol Ayrımı-Kızıltaş-Bahçesaray Yolu-Bahçesaray",
+        "donus_baslik": "BAHÇESARAY HAREKET SAATLERİ",
+        "donus_guzergah": "Bahçesaray-Bahçesaray Yolu-Kızıltaş-Gürpınar Yol Ayrımı-Çiçekli-Edremit-Bölge Hastanesi-Çatak Durağı-Şabaniye Caddesi-Hacıbekir Caddesi-Van Avm Kavşağı-Kültür Sarayı-Çohaz Petrol Kavşağı-Depolama Alanı"
+    },
+    {
+        "guzergah_id": "239",
+        "guzergah_kodu": "ERC-1",
+        "guzergah_not": "",
+        "guzergah_adi": "VAN ERCİŞ OTOBÜS HAREKET SAATLERİ",
+        "gidis_baslik": "VAN MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Van Otogarı- YYÜ Kampüs Kavşağı- Muradiye Çaldıran Yol Ayrımı- Ünseli-Erciş Şeker Fab. Sanayi Kavşağı- Viar Durağı- Van Yolu Cad- Kışla Cad- Erciş Otobüs Depolama Alanı",
+        "donus_baslik": "ERCİŞ HAREKET SAATLERİ",
+        "donus_guzergah": "Erciş Otobüs Depolama Alanı-Kışla Cad-Van Yolu Cad-Viar Durağı-Sanayi Kavşağı-Erciş Şeker Fab.Ünseli- Muradiye Çaldıran Yol Ayrımı-YYÜ Kampüs Kavşağı-Van Otogarı "
+    },
+    {
+        "guzergah_id": "240",
+        "guzergah_kodu": "602",
+        "guzergah_not": "PERŞEMBE GÜNLERİ HİZMET VERMEKTEDİR.",
+        "guzergah_adi": "ÇELEBİBAĞI HALK PLAJI",
+        "gidis_baslik": "ERCİŞ MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Kaymakamlık Önü- Çelebibağı Halk Plajı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "241",
+        "guzergah_kodu": "114-116",
+        "guzergah_not": "CUMARTESİ-PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "GÜNDOĞAN-KIZILTAŞ-ABALI-ALADÜZ",
+        "gidis_baslik": "GÜNDOĞAN HAREKET SAATLERİ",
+        "gidis_guzergah": "Gündoğan Mah-Kızıltaş-Abalı-Aladüz-Çiçekli-Edremit Çarşı-Kocaeli Parkı-Bölge Hast.-İpekyolu Cad-Eski Emniyet-Maraş Cad.-Ezberciler-Milli Egemenlik Cad.Zaferler İÖO-Depolama Alanı",
+        "donus_baslik": "MERKEZ HAREKET SAATLERİ",
+        "donus_guzergah": "Depolama Alanı-Zaferler İÖO-Milli Egemenlik Cad.-Ezberciler-Maraş Cad.-Eski Emniyet-İpekyolu Cad-Bölge Hast.-Kocaeli Parkı-Edremit Çarşı-Çiçekli-Aladüz-Abalı-Gündoğan Mah."
+    },
+    {
+        "guzergah_id": "243",
+        "guzergah_kodu": "433",
+        "guzergah_not": "SEFERLERİMİZ PAZAR GÜNLERİ UYGULANMAMAKTADIR.",
+        "guzergah_adi": "BAKRAÇLI-YEDİKİLİSE",
+        "gidis_baslik": "OTOBÜS HAREKET SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği-Zaferler İİO-Milli Egemenlik Cad.-Hayat Hastanesi-Erek Dağı Cad.-Karşıyaka Beşyol-Gazi Osman Cad.-Bakraçlı Köy Yolu-Aşağı Bakraçlı-Yukarı Bakraçlı-Bakraçlı Köy Yolu-Gazi Osman Cad.-Karşıyaka Beşyol-Erek Dağı Cad.-Van AVM-Cumhuriyet Cad.-Ezberciler İş Merkezi Durağı-Kültür Sarayı-Zaferler İİO-Otobüs Hareket Amirliği.",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "245",
+        "guzergah_kodu": "351",
+        "guzergah_not": "UÇAK İNİŞ SAATLERİNE GÖRE SEFER SAATLERİ DEĞİŞİKLİK GÖSTEREBİLR.",
+        "guzergah_adi": "HAVALİMANI",
+        "gidis_baslik": "SALI-ÇARŞAMBA-PERŞEMBE-CUMA OTOBÜS HAREKET SAATLERİ",
+        "gidis_guzergah": "Havaalanı-DSİ 17.Bölge Müd.-İpekyolu Cad-Çatak Durağı-Eski Emniyet Kav.-Maraş Cad-Ezberciler İş Merkezi-Kültür SarayıZaferler İOÖ-Depolama Alanı-Kültür Sarayı -Ezberciler İş Merkezi-Maraş Cad-Eski Emniyet Kav-İpekyolu Cad.- Çatak Durağı-Dsi 17.Bölge Müd.-Havaalanı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "246",
+        "guzergah_kodu": "520",
+        "guzergah_not": "SEFERLERİMİZ PAZAR GÜNLERİ UYGULANMAMAKTADIR.",
+        "guzergah_adi": "ABDURRAHMANGAZİ-İSKELE MAHALLESİ",
+        "gidis_baslik": "MERKEZ HAREKET SAATLERİ",
+        "gidis_guzergah": "Depolama alanı-Şerefiye Caddesi-Astsubay yolu Sokak-Ferit Melen Caddesi-Beşyol Kavşağı-İskele Caddesi-Yeni Emniyet Kavşağı-İpekyolu Caddesi-İl Afet Işıkları-Ethem Dede Sokak-Zeve 1. Sokak-Hüsref Paşa Caddesi-837. Sokak-Kalecik Yolu Sokak-Trenyolu Sokak-Şemsibey Caddesi-Cezaevi Sokak-Veysel Karani Sokak-Özgökçe Sokak-İpekyolu Caddesi-Yeni Emniyet Kavşağı-İskele Caddesi-Yeniyol Sokak-Sıhke Caddesi-Ferit Melen Caddesi-Astsubay Yolu Sokak-Şerefiye Caddesi-Depolama alanı",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "248",
+        "guzergah_kodu": "803",
+        "guzergah_not": "CUMARTESİ-PAZAR GÜNLERİ TOPLU TAŞIMA HİZMETİ VERİLMEMEKTEDİR.",
+        "guzergah_adi": "DEĞİRMENARKI-KARAKOÇ-ARITOPRAK",
+        "gidis_baslik": "HAREKET SAATLERİ",
+        "gidis_guzergah": "Otobüs Hareket Amirliği -Ters Ev-Kışla Yolu-Beşyol-Muzy Durağı-Koçibey Caddesi-Hıdırelyez Caddesi-Otogar -Özalp Saray Yolu-Değirmenarkı,Karakoç,Arıtoprak",
+        "donus_baslik": "",
+        "donus_guzergah": ""
+    },
+    {
+        "guzergah_id": "249",
+        "guzergah_kodu": "122",
+        "guzergah_not": "Cumartesi-Pazar Günleri Toplu Taşıma hizmeti verilmemektedir.",
+        "guzergah_adi": "EDREMİT TOKİ-BÜYÜKŞEHİR BELEDİYESİ",
+        "gidis_baslik": "EDREMİT TOKİ HAREKET SAATLERİ",
+        "gidis_guzergah": "Edremit Yeni Toki-Kiracılar Toki-Eski Toki-Nur Tatar Spor Salonu-İpekyolu Caddesi-Bölge Hastanesi-İkinisan Kavşağı-İkinisan Caddesi-Erekdağı Caddesi-Büyükşehir Belediyesi.",
+        "donus_baslik": "MERKEZ HAREKET SAATLERİ",
+        "donus_guzergah": "Büyükşehir Belediyesi-Erekdağı Caddesi-İkinisan Caddesi-Bölge Hastanesi-İpekyolu Caddesi-Nur Tatar Spor Salonu-Edremit Yeni Toki-Kiracılar Toki-Eski Toki."
+    },
+    {
+        "guzergah_id": "250",
+        "guzergah_kodu": "203-204",
+        "guzergah_not": "",
+        "guzergah_adi": "CEZAEVİ KAMPÜSÜ-KOZLUCA MAHALLESİ",
+        "gidis_baslik": "CEZAEVİ KAMPÜSÜ HAREKET SAATLERİ",
+        "gidis_guzergah": "Depolama Alanı-Kentsel Durağı-Emrah Selvi Çay Bahçesi Yanı-Diş Hastanesi-Sanayi Sitesi-Şeker Fabrikası-Balık Bendi Kavşağı-Haydarbey Mahallesi-Cezaevi Kampüsü",
+        "donus_baslik": "KOZLUCA MAHALLESİ HAREKET SAATLERİ",
+        "donus_guzergah": "Depolama Alanı-Kentsel Durağı-Kaymakamlık Arkası-Yıldırım Kavşağı-Sanayi Sitesi-Şeker Fabrikası-Balık Bendi Kavşağı-Kozluca Mahallesi"
+    }
+]
