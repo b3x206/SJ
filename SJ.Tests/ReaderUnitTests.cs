@@ -22,25 +22,27 @@ public sealed class ReaderUnitTests
 ";
 
     const string Data1Nested = @"{
-  ""numbers"": [0, -1, 1.23, 1.0e-5, 1000000],
-  ""strings"": {
-    ""basic"": ""Hello World"",
-    ""escaped"": ""Quote: \"", Backslash: \\, Tab: \t, Newline: \n"",
-    ""unicode_BMP"": ""Euro: \u20AC"",
-    ""emoji_surrogate"": ""Pizza: \uD83C\uDF55"",
-    ""emoji_with_variant"": ""The 🅱 variant: \uD83C\uDD71\uFE0F"",
-    ""raw_emoji"": ""🍕"",
-    ""non_ascii_literal"": ""你好, ¡Hola!, Grüße""
-  },
-  ""nesting"": [
-    {
-      ""depth_1"": [
-        { ""depth_2"": ""We're deep now"" }
-      ]
-    }
-  ],
-  ""logic"": [true, false, null],
-  ""empty"": { ""obj"": {}, ""arr"": [] }
+    ""numbers"": [0, -1, 1.23, 1.0e-5, 1000000],
+    ""strings"": {
+        ""basic"": ""Hello World"",
+        ""escaped"": ""Quote: \"", Backslash: \\, Tab: \t, Newline: \n"",
+        ""unicode_BMP"": ""Euro: \u20AC"",
+        ""emoji_surrogate"": ""Pizza: \uD83C\uDF55"",
+        ""emoji_with_variant"": ""The 🅱 variant: \uD83C\uDD71\uFE0F"",
+        ""raw_emoji"": ""🍕"",
+        ""non_ascii_literal"": ""你好, ¡Hola!, Grüße""
+    },
+    ""nesting"": [{
+        ""depth_1"": [
+            { ""depth_2"": ""We're deep now"" }
+        ]
+    }],
+    ""logic"": [true, false, null],
+    ""empty"": { ""obj"": {}, ""arr"": [] }
+}";
+    // ↓ the sj.h does not complain what was there before, "if it starts/ends a recursive object it was valid". this one will complain though.
+    const string DataStackingInvalid = @"{
+    ""key"": { ""another key"": [{]}, ]
 }";
 
     const string DataJSC = @"/* Let's start our invalid JSON journey! */
@@ -184,6 +186,9 @@ public sealed class ReaderUnitTests
     public void TestBasicInvalid() => Read(Data1Invalid);
     [TestMethod]
     public void TestSlightlyComplicated() => Read(Data1Nested);
+    [TestMethod]
+    [ExpectedException(typeof(SJReader.ReadException))]
+    public void TestStacking() => Read(DataStackingInvalid);
     [TestMethod]
     public void TestJSC() => ReadJSC(DataJSC);
     [TestMethod]
