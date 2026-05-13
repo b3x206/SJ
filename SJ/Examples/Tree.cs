@@ -56,8 +56,8 @@ namespace SJ.Examples
                     {
                         // Throw the error with one of the following methods
                         // 1. reader.ThrowError = true; → Mutates the reader. Could be undesired if exception is being caught.
-                        // 2. throw new SJReader.ReadException(reader); → Throws error without changing 
-                        // 3. reader.ThrowError(); → Less verbose
+                        // 2. throw new SJReader.ReadException(reader); → Throws error without changing the reader
+                        // 3. reader.ThrowError(); → Less verbose and easy
                         reader.ThrowError();
                         break;
                     }
@@ -116,65 +116,77 @@ namespace SJ.Examples
             }
         }
 
+        public static string ToJSON(SJTree tree) => ToJSON(tree, new SJStringBuilderWriter()
+        {
+            ThrowOnError = true
+        });
+        public static string ToJSON(SJTree tree, SJWriter writer)
+        {
+            WriteTo(tree, writer);
+            return writer.ToString() ?? "";
+        }
+        public static void WriteTo(SJTree tree, SJWriter writer)
+        {
+            switch (tree.type)
+            {
+                case SJType.Number:
+                    writer.WriteNumber(tree.numberValue);
+                    break;
+                case SJType.String:
+                    writer.WriteString(tree.stringValue);
+                    break;
+                case SJType.Bool:
+                    writer.WriteBool(tree.boolValue);
+                    break;
+                case SJType.Null:
+                    writer.WriteNull();
+                    break;
+                case SJType.Object:
+                    if (tree.objectValue.IsValueCreated)
+                    {
+                        using (writer.Object())
+                        {
+                            foreach (var kv in tree.objectValue.Value)
+                            {
+                                writer.WriteKey(kv.Key);
+                                WriteTo(kv.Value, writer);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        goto case SJType.Null;
+                    }
+                    break;
+                case SJType.Array:
+                    if (tree.arrayValue.IsValueCreated)
+                    {
+                        using (writer.Array())
+                        {
+                            foreach (var v in tree.arrayValue.Value)
+                            {
+                                WriteTo(v, writer);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        goto case SJType.Null;
+                    }
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Invalid node type '{tree.type}'");
+            }
+        }
+
         public override string ToString()
         {
-            switch (type)
+            return ToJSON(this, new SJStringBuilderWriter()
             {
-                default:
-                    return "!! ERROR !!";
-
-                case SJType.Object:
-                    if (objectValue.IsValueCreated)
-                    {
-                        var sb = new StringBuilder(128);
-                        bool first = true;
-                        foreach (var kv in objectValue.Value)
-                        {
-                            if (!first)
-                            {
-                                sb.Append(' ').Append(',');
-                            }
-
-                            sb.Append('"').Append(kv.Key.ToString()).Append('"').Append(':').Append(kv.Value.ToString());
-                            first = false;
-                        }
-                        return sb.ToString();
-                    }
-                    else
-                    {
-                        return "{}";
-                    }
-                case SJType.Array:
-                    if (arrayValue.IsValueCreated)
-                    {
-                        var sb = new StringBuilder(128);
-                        bool first = true;
-                        foreach (var v in arrayValue.Value)
-                        {
-                            if (!first)
-                            {
-                                sb.Append(' ').Append(',');
-                            }
-
-                            sb.Append(v.ToString());
-                            first = false;
-                        }
-                        return sb.ToString();
-                    }
-                    else
-                    {
-                        return "[]";
-                    }
-
-                case SJType.Number:
-                    return numberValue.ToString();
-                case SJType.String:
-                    return stringValue;
-                case SJType.Bool:
-                    return boolValue.ToString();
-                case SJType.Null:
-                    return "null";
-            }
+                ThrowOnError = true,
+                indentSize = 4
+            });
         }
     }
 
@@ -208,7 +220,7 @@ namespace SJ.Examples
             var reader = new SJStringReader(data);
             var tree = SJTree.FromJSON(reader);
 
-            Console.WriteLine("Parsed SJ tree :");
+            Console.WriteLine("Parsed Tree :");
             Console.WriteLine(tree.ToString());
         }
     }

@@ -23,11 +23,52 @@ namespace SJ
     }
 
     /// <summary>
-    /// Read JSON SAX style.
-    /// <br>The class can read from a string. It does not throw exceptions, check <see cref="Error"/> 
-    /// or the methods return <see langword="false"/> when an error occurs.</br>
-    /// <br>Inherit from this class to write a data source for reading.</br>
+    /// Base class for <i>most</i> JSON readers.
     /// </summary>
+    /// <example>
+    /// <![CDATA[
+    /// using SJ;
+    /// 
+    /// // An example class would look like this:
+    /// // (In fact, this is just SJStringReader)
+    /// public sealed class SJExampleReader : SJReader
+    /// {
+    ///     private string _Data;
+    ///     public string Data
+    ///     {
+    ///         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    ///         get => _Data;
+    ///         set
+    ///         {
+    ///             if (string.Equals(value, _Data, StringComparison.Ordinal))
+    ///             {
+    ///                 return;
+    ///             }
+    /// 
+    ///             _Data = value;
+    ///             Reset();
+    ///         }
+    ///     }
+    ///
+    ///     public SJExampleReader()
+    ///     { }
+    ///     public SJExampleReader(string data)
+    ///     {
+    ///         _Data = data;
+    ///     }
+    /// 
+    ///     // This is used as a limiter.
+    ///     public override int Length => _Data?.Length ?? 0;
+    ///     // Because I ported the pointer stuff as-is, some parts of the parser may read off by one.
+    ///     // It is recommended to do an bound check and return EOF of your choice
+    ///     protected override char At(int i) => i < Data.Length ? _Data[i] : '\0';
+    ///     // Because each value slice is evaluated lazily, the data ranges must persist and should be representable easily as a range (making arbitrary Streams much harder)
+    ///     // Note that there isn't much of a reason to do this, if you read the data as soon as it's received from the SJReader.
+    ///     protected override ReadOnlySpan<char> Slice(int start, int length) => string.IsNullOrEmpty(_Data) ? ReadOnlySpan<char>.Empty : _Data.AsSpan(start, length);
+    /// 
+    /// }
+    /// ]]>
+    /// </example>
     public abstract class SJReader
     {
         /// <summary>
@@ -128,7 +169,7 @@ namespace SJ
 
                 if (_ThrowOnError && !string.IsNullOrEmpty(Error))
                 {
-                    throw new ReadException(this);
+                    ThrowError();
                 }
             }
         }
