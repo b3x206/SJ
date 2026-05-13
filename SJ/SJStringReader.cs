@@ -93,37 +93,38 @@ namespace SJ
     /// </example>
     public sealed class SJStringReader : SJReader
     {
-        private string _data;
+        private string _Data;
         public string Data
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _data;
+            get => _Data;
             set
             {
-                if (string.Equals(value, _data, StringComparison.Ordinal))
+                if (string.Equals(value, _Data, StringComparison.Ordinal))
                 {
                     return;
                 }
 
-                _data = value;
+                _Data = value;
                 Reset();
             }
         }
-
-        public override int Length => _data?.Length ?? 0;
-
-        // Because I ported the pointer arithmetic directly, should check EOF / do a bounds check
-        // Eh, branch predictors exist for a reason (activating larp overdrive)
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected override char At(int i) => i < Data.Length ? _data[i] : '\0';
-        protected override ReadOnlySpan<char> Slice(int start, int length) => Data.AsSpan(start, length);
 
         public SJStringReader()
         { }
         public SJStringReader(string data)
         {
-            _data = data;
+            _Data = data;
         }
+
+        // This is used as a limiter.
+        public override int Length => _Data?.Length ?? 0;
+        // Because I ported the pointer stuff as-is, some parts of the parser may read off by one.
+        // It is recommended to do an bound check and return EOF of your choice
+        protected override char At(int i) => i < Data.Length ? _Data[i] : '\0';
+        // Because each value slice is evaluated lazily, the data ranges must persist and should be representable easily as a range (making arbitrary Streams much harder)
+        // Note that there isn't much of a reason to do this, if you read the data as soon as it's received from the SJReader.
+        protected override ReadOnlySpan<char> Slice(int start, int length) => string.IsNullOrEmpty(_Data) ? ReadOnlySpan<char>.Empty : _Data.AsSpan(start, length);
     }
 }
 

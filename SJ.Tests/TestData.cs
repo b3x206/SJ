@@ -1,0 +1,75 @@
+﻿namespace SJ.Tests;
+
+/// <summary>
+/// Contains JSON data to test against.
+/// </summary>
+public static class TestData
+{
+    // JSON Data
+    // - Root Data
+    public const string JsonDataEmptyObject = @"{}", JsonDataEmptyArray = @"[]", JsonDataRootString = @"""Hello world!""",
+        JsonDataRootNumber = @"42.42", JsonDataRootBool = @"false", JsonDataRootNull = @"null", DataEmpty = "";
+
+    public const string JsonData1 = @"{
+        ""foo"": [""bar"", ""baz""],
+        ""idk"": 42,
+        ""mango"": { ""6"": 7 }
+}";
+    public const string JsonDataInvalid = @"{
+        ""foo"": ""bar"", ""baz""],
+        ""id],123
+// Are comments valid? No
+";
+    public const string JsonData2 = @"{
+    ""numbers"": [0, -1, 1.23, 1.0e-5, 1000000],
+    ""strings"": {
+        ""basic"": ""Hello World"",
+        ""escaped"": ""Quote: \"", Backslash: \\, Tab: \t, Newline: \n"",
+        ""unicode_BMP"": ""Euro: \u20AC"",
+        ""emoji_surrogate"": ""Pizza: \uD83C\uDF55"",
+        ""emoji_with_variant"": ""The 🅱 variant: \uD83C\uDD71\uFE0F"",
+        ""raw_emoji"": ""🍕"",
+        ""non_ascii_literal"": ""你好, ¡Hola!, Grüße""
+    },
+    ""nesting"": [{
+        ""depth_1"": [
+            { ""depth_2"": ""We're deep now"" }
+        ]
+    }],
+    ""logic"": [true, false, null],
+    ""empty"": { ""obj"": {}, ""arr"": [] }
+}";
+    // ↓ the sj.h does not complain what was there before, "if it starts/ends a recursive object it was valid". this one will complain though.
+    public const string JsonDataStackingInvalid = @"{
+    ""key"": { ""another key"": [{]}, ]
+}";
+
+    public const string JsonDataComment = @"/* Let's start our invalid JSON journey! */
+// Also some more lines.
+{
+        // I like annotating my JSON, but it gets deleted when it's serialized :(
+        /* wen eta fix this? */
+        ""Array"": [1,2,3,4,5,6,7,8, /* oops convenient comment */ 9,10,11],
+        ""Objects"": { ""Yes"": true, ""No"": false, ""Empty??"": null, ""Whatever"": ""/* Not really a comment. */"" } // I like putting comments where inconvenient
+} // Our line ends with */";
+    public const string JsonDataCommentInvalid = @"/* Let's start our invalid JSON journey! */
+// Also some more lines.
+{
+        // I like annotating my JSON, but it gets deleted when it's serialized :(
+        /* wen eta fix this?
+} // Our line ends with */";
+
+    // - File Data
+    public static readonly string BaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+    public static readonly string JsonFileValidName = Path.Combine(BaseDirectory, "Files", "valid.json"),
+        JsonFileLargeName = Path.Combine(BaseDirectory, "Files", "5mb.json"),
+        JsonFileLargeMinName = Path.Combine(BaseDirectory, "Files", "5mb.min.json"),
+        JsonFileInvalidUnterminated = Path.Combine(BaseDirectory, "Files", "unterminated.json"),
+        JsonFileInvalidNoColon = Path.Combine(BaseDirectory, "Files", "missing_colon.json"),
+        JsonFileInvalidBinary = Path.Combine(BaseDirectory, "Files", "binary.json");
+
+    // Escape Data
+    public const string EscapeContent = "Quote: \", Backslash: \\, Tab: \t, Newline: \n, Pizza: \uD83C\uDF55, The 🅱 variant: \uD83C\uDD71\uFE0F";
+    public const string EscapeBrokenUnescape = "Oh wow, I'm escaping things I shouldn't! : \\a\\b\\c\\d \\e\\f\\g\\h\\i\\j\\k \\l\\m\\n\\o\\p\\q\\r\\s\\ t\\u\\v\\w\\x\\y\\z\\A\\B\\C \\D\\E\\F\\G\\H\\I\\J\\K\\L\\M\\N\\O\\P\\Q\\ R\\S\\T\\U\\V \\W\\X \\Y\\Z'";
+    public const string EscapeBrokenSurrogate = "\uDF55\uD83C\uDD71\uD83C\uFE0F In C++, surrogate escape you!";
+}

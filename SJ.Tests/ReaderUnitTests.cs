@@ -1,75 +1,12 @@
 ﻿using System.Text;
+using static SJ.Tests.TestData;
 
 namespace SJ.Tests;
 
 [TestClass]
 public sealed class ReaderUnitTests
 {
-    // Root Data
-    const string DataEmptyObject = @"{}", DataEmptyArray = @"[]", DataRootString = @"""Hello world!""",
-        DataRootNumber = @"42.42", DataRootBool = @"false", DataRootNull = @"null", DataEmpty = "";
-
-    // JSON Data
-    const string Data1 = @"{
-        ""foo"": [""bar"", ""baz""],
-        ""idk"": 42,
-        ""mango"": { ""6"": 7 }
-}";
-    const string Data1Invalid = @"{
-        ""foo"": ""bar"", ""baz""],
-        ""id], .
-// Are comments valid? No
-";
-
-    const string Data1Nested = @"{
-    ""numbers"": [0, -1, 1.23, 1.0e-5, 1000000],
-    ""strings"": {
-        ""basic"": ""Hello World"",
-        ""escaped"": ""Quote: \"", Backslash: \\, Tab: \t, Newline: \n"",
-        ""unicode_BMP"": ""Euro: \u20AC"",
-        ""emoji_surrogate"": ""Pizza: \uD83C\uDF55"",
-        ""emoji_with_variant"": ""The 🅱 variant: \uD83C\uDD71\uFE0F"",
-        ""raw_emoji"": ""🍕"",
-        ""non_ascii_literal"": ""你好, ¡Hola!, Grüße""
-    },
-    ""nesting"": [{
-        ""depth_1"": [
-            { ""depth_2"": ""We're deep now"" }
-        ]
-    }],
-    ""logic"": [true, false, null],
-    ""empty"": { ""obj"": {}, ""arr"": [] }
-}";
-    // ↓ the sj.h does not complain what was there before, "if it starts/ends a recursive object it was valid". this one will complain though.
-    const string DataStackingInvalid = @"{
-    ""key"": { ""another key"": [{]}, ]
-}";
-
-    const string DataJSC = @"/* Let's start our invalid JSON journey! */
-// Also some more lines.
-{
-        // I like annotating my JSON, but it gets deleted when it's serialized :(
-        /* wen eta fix this? */
-        ""Array"": [1,2,3,4,5,6,7,8, /* oops convenient comment */ 9,10,11],
-        ""Objects"": { ""Yes"": true, ""No"": false, ""Empty??"": null, ""Whatever"": ""/* Not really a comment. */"" } // I like putting comments where inconvenient
-} // Our line ends with */";
-    const string DataJSCInvalid = @"/* Let's start our invalid JSON journey! */
-// Also some more lines.
-{
-        // I like annotating my JSON, but it gets deleted when it's serialized :(
-        /* wen eta fix this?
-} // Our line ends with */";
-
-    // File Data
-    static readonly string BaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-    static readonly string ValidName = Path.Combine(BaseDirectory, "Files", "valid.json"),
-        LargeName = Path.Combine(BaseDirectory, "Files", "5mb.json"),
-        LargeMinName = Path.Combine(BaseDirectory, "Files", "5mb.min.json"),
-        InvalidUnterminated = Path.Combine(BaseDirectory, "Files", "unterminated.json"),
-        InvalidNoColon = Path.Combine(BaseDirectory, "Files", "missing_colon.json"),
-        InvalidBinary = Path.Combine(BaseDirectory, "Files", "binary.json");
-
-    static void ReadInner(StringBuilder sb, SJReader reader, SJReader.Value root)
+    public static void ReadInner(StringBuilder sb, SJReader reader, SJReader.Value root)
     {
         switch (root.type)
         {
@@ -137,14 +74,14 @@ public sealed class ReaderUnitTests
                 }
         }
     }
-    const int DefaultSbCapacity = 512;
-    static StringBuilder Read(string data)
+    public const int DefaultSbCapacity = 512;
+    public static StringBuilder Read(string data)
     {
         var sb = new StringBuilder(DefaultSbCapacity);
         Read(sb, data);
         return sb;
     }
-    static void Read(StringBuilder sb, string data)
+    public static void Read(StringBuilder sb, string data)
     {
         sb.Clear();
         var reader = new SJStringReader(data);
@@ -152,13 +89,13 @@ public sealed class ReaderUnitTests
 
         ReadInner(sb, reader, root);
     }
-    static StringBuilder ReadJSC(string data)
+    public static StringBuilder ReadJSC(string data)
     {
         var sb = new StringBuilder(DefaultSbCapacity);
         ReadJSC(sb, data);
         return sb;
     }
-    static void ReadJSC(StringBuilder sb, string data)
+    public static void ReadJSC(StringBuilder sb, string data)
     {
         sb.Clear();
         var reader = new SJStringReader(data)
@@ -169,7 +106,7 @@ public sealed class ReaderUnitTests
 
         ReadInner(sb, reader, root);
     }
-    static StringBuilder Read(SJReader reader)
+    public static StringBuilder Read(SJReader reader)
     {
         var sb = new StringBuilder(DefaultSbCapacity);
         var root = reader.Read();
@@ -180,24 +117,24 @@ public sealed class ReaderUnitTests
 
     // Basic tests: Read and Empty
     [TestMethod]
-    public void TestBasic() => Read(Data1);
+    public void TestBasic() => Read(JsonData1);
     [TestMethod]
     [ExpectedException(typeof(SJReader.ReadException))]
-    public void TestBasicInvalid() => Read(Data1Invalid);
+    public void TestBasicInvalid() => Read(JsonDataInvalid);
     [TestMethod]
-    public void TestSlightlyComplicated() => Read(Data1Nested);
-    [TestMethod]
-    [ExpectedException(typeof(SJReader.ReadException))]
-    public void TestStacking() => Read(DataStackingInvalid);
-    [TestMethod]
-    public void TestJSC() => ReadJSC(DataJSC);
+    public void TestSlightlyComplicated() => Read(JsonData2);
     [TestMethod]
     [ExpectedException(typeof(SJReader.ReadException))]
-    public void TestJSCInvalid() => ReadJSC(DataJSCInvalid);
+    public void TestStacking() => Read(JsonDataStackingInvalid);
+    [TestMethod]
+    public void TestJSC() => ReadJSC(JsonDataComment);
+    [TestMethod]
+    [ExpectedException(typeof(SJReader.ReadException))]
+    public void TestJSCInvalid() => ReadJSC(JsonDataCommentInvalid);
     [TestMethod]
     public void TestEmptyValues()
     {
-        string[] datas = [DataEmptyObject, DataEmptyArray, DataRootString, DataRootNumber, DataRootBool, DataRootNull];
+        string[] datas = [JsonDataEmptyObject, JsonDataEmptyArray, JsonDataRootString, JsonDataRootNumber, JsonDataRootBool, JsonDataRootNull];
         var sb = new StringBuilder(64);
 
         for (int i = 0; i < datas.Length; i++)
@@ -206,7 +143,7 @@ public sealed class ReaderUnitTests
             Read(sb, data);
 
             // Since the empty builder for the sample code is simple but somewhat matching, it should equal.
-            Assert.IsTrue(sb.Equals(data), $"Result data should equal StringBuilder:\n{data} != {sb}");
+            Assert.AreEqual(data, sb.ToString());
         }
     }
     [TestMethod]
@@ -264,7 +201,7 @@ public sealed class ReaderUnitTests
     /// Tests reading a basic JSON file (100kb-ish).
     /// </summary>
     [TestMethod]
-    public void TestFile() => TestFile(ValidName);
+    public void TestFile() => TestFile(JsonFileValidName);
     /// <summary>
     /// Tests reading large JSON file.
     /// </summary>
@@ -272,16 +209,16 @@ public sealed class ReaderUnitTests
     [Timeout(30000)] // ← Change this if your PC is slower, but it's unlikely you will need this.
     public void TestVeryLarge()
     {
-        TestFile(LargeName);
-        TestFile(LargeMinName);
+        TestFile(JsonFileLargeName);
+        TestFile(JsonFileLargeMinName);
     }
     [TestMethod]
     [ExpectedException(typeof(SJReader.ReadException))]
-    public void TestInvalidUnterminated() => TestFile(InvalidUnterminated);
+    public void TestInvalidUnterminated() => TestFile(JsonFileInvalidUnterminated);
     [TestMethod]
     [ExpectedException(typeof(SJReader.ReadException))]
-    public void TestInvalidNoColon() => TestFile(InvalidNoColon);
+    public void TestInvalidNoColon() => TestFile(JsonFileInvalidNoColon);
     [TestMethod]
     [ExpectedException(typeof(SJReader.ReadException))]
-    public void TestInvalidBinary() => TestFile(InvalidBinary); // This could also throw IO error, but it don't.
+    public void TestInvalidBinary() => TestFile(JsonFileInvalidBinary); // This could also throw IO error, but it don't.
 }

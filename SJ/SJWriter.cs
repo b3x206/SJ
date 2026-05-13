@@ -1,0 +1,661 @@
+﻿using System;
+using System.Globalization;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+
+namespace SJ
+{
+    /// <summary>
+    /// Base class for <i>most</i> JSON writers.
+    /// </summary>
+    /// <example>
+    /// <![CDATA[
+    /// using SJ;
+    /// 
+    /// // An example class would look like this:
+    /// public sealed class SJExampleWriter : SJWriter
+    /// {
+    ///     private readonly WriteSource data;
+    /// 
+    ///     public SJExampleWriter(WriteSource data)
+    ///     {
+    ///         this.data = data ?? throw new System.ArgumentNullException(nameof(data));
+    ///     }
+    /// 
+    ///     public override void Append(char c) => data.Write(c);
+    ///     public override void Append(string s) => data.Write(s);
+    /// 
+    ///     public override void Reset()
+    ///     {
+    ///         base.Reset();
+    ///         data.Clear(); // Or reset the position to start and truncate remaining data.
+    ///     }
+    ///     public override string ToString()
+    ///     {
+    ///         // Convert the resulting data to string, if necessary.
+    ///         return data.ToString();
+    ///     }
+    /// }
+    /// ]]>
+    /// </example>
+    public abstract class SJWriter
+    {
+        /// <summary>
+        /// Exception thrown on an error case while reading JSON.
+        /// </summary>
+        public class WriteException : Exception
+        {
+            public WriteException(SJWriter writer) : base($"{writer.Error} | at char={writer.count}")
+            { }
+            public WriteException(string message, int count) : base($"{message} | at char={count}")
+            { }
+            public WriteException(string message) : base(message)
+            { }
+        }
+        /// <summary>
+        /// A tracker for type information that can be stacked and indexed (i.e. recursive data)
+        /// </summary>
+        public sealed class WriteStackInfo
+        {
+            /// <summary>
+            /// Write type, this is generally either 
+            /// <see cref="SJType.Array"/> or <see cref="SJType.Object"/>
+            /// </summary>
+            public SJType type;
+            /// <summary>
+            /// Current write order index. This is non-zero if this is not the first value written.
+            /// </summary>
+            public int index = 0;
+
+            public WriteStackInfo(SJType type)
+            {
+                this.type = type;
+            }
+            public static implicit operator WriteStackInfo(SJType type) => new WriteStackInfo(type);
+        }
+
+        private readonly struct ObjectScope : IDisposable
+        {
+            private readonly SJWriter writer;
+            private readonly bool success;
+
+            public ObjectScope(SJWriter writer)
+            {
+                this.writer = writer ?? throw new ArgumentNullException(nameof(writer));
+                success = writer.BeginObject();
+            }
+
+            public void Dispose()
+            {
+                if (success)
+                {
+                    writer.EndObject();
+                }
+            }
+        }
+        private readonly struct ArrayScope : IDisposable
+        {
+            private readonly SJWriter writer;
+            private readonly bool success;
+
+            public ArrayScope(SJWriter writer)
+            {
+                this.writer = writer ?? throw new ArgumentNullException(nameof(writer));
+                success = writer.BeginArray();
+            }
+
+            public void Dispose()
+            {
+                if (success)
+                {
+                    writer.EndArray();
+                }
+            }
+        }
+
+        // settings
+        /// <summary>
+        /// The indent size to use. If this is 0 or less, no pretty printing is done.
+        /// </summary>
+        public int indentSize = 0;
+        /// <summary>
+        /// Whether if this writer has written a JSON document that is done.
+        /// </summary>
+        public bool finish = false;
+        /// <summary>
+        /// Maximum size for <see cref="writeStack"/>
+        /// </summary>
+        public int maxDepth = 128;
+
+        // state
+        /// <summary>
+        /// Amount written by this writer.
+        /// </summary>
+        public int count;
+        protected bool _ThrowOnError = false;
+        /// <summary>
+        /// When an erroreneous case occurs (or <see cref="Error"/> is set to anything other 
+        /// than null/<see cref="string.Empty"/>), setting the <see cref="Error"/> will throw.
+        /// <br>Setting this <see langword="true"/> while the <see cref="Error"/> 
+        /// is not null will throw the currently existing error.</br>
+        /// </summary>
+        public bool ThrowOnError
+        {
+            get => _ThrowOnError;
+            set
+            {
+                _ThrowOnError = value;
+
+                if (_ThrowOnError && !string.IsNullOrEmpty(Error))
+                {
+                    ThrowError();
+                }
+            }
+        }
+        protected string _Error = string.Empty;
+        /// <summary>
+        /// The error string detailing why the writer failed.
+        /// </summary>
+        public string Error
+        {
+            get => _Error;
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    _Error = string.Empty;
+                    return;
+                }
+
+                _Error = value;
+                if (_ThrowOnError)
+                {
+                    ThrowError();
+                }
+            }
+        }
+        public Stack<WriteStackInfo> writeStack = new Stack<WriteStackInfo>();
+        public WriteStackInfo Top => writeStack.Count > 0 ? writeStack.Peek() : null;
+        public int Depth => writeStack.Count;
+        // This state doesn't need to be put into the write stack
+        // as from what I see on JSON.parse, keys must be string, so there is no recursion on those
+        // Though it has to be reset correctly in this case.
+        /// <summary>
+        /// 0 = none expected, 1 = key, 2 = value
+        /// </summary>
+        protected int kvState = 0;
+        /// <summary>
+        /// Need to write key in a key/value entry.
+        /// </summary>
+        public bool NeedKey => kvState == 1;
+        /// <summary>
+        /// Need to write value in a key/value entry.
+        /// </summary>
+        public bool NeedValue => kvState == 2;
+
+        /// <summary>
+        /// Append to the underlying StringBuilder/Stream-like object.
+        /// <br>You can use this to write literals in any position, but it isn't recommended.</br>
+        /// </summary>
+        public abstract void Append(char c);
+        /// <summary>
+        /// <inheritdoc cref="Append(char)"/>
+        /// </summary>
+        public virtual void Append(string s)
+        {
+            for (int i = 0; i < s?.Length; i++)
+            {
+                Append(s[i]);
+            }
+        }
+
+        /// <summary>
+        /// Throws the currently stored error. It does not check whether if an error is available.
+        /// </summary>
+        /// <exception cref="WriteException"></exception>
+        public virtual void ThrowError()
+        {
+            throw new WriteException(this);
+        }
+
+        protected void WriteIndent(int depth)
+        {
+            if (depth <= 0 || indentSize <= 0)
+            {
+                return;
+            }
+
+            string indent = string.Create(indentSize, ' ', (s, c) => { for (int i = 0; i < s.Length; i++) { s[i] = c; } });
+            for (int i = 0; i < depth; i++)
+            {
+                Append(indent);
+            }
+            count += indentSize * depth;
+        }
+        protected void PrepareValue()
+        {
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return;
+            }
+
+            if (Top != null)
+            {
+                if (!NeedValue)
+                {
+                    if (Top.index > 0)
+                    {
+                        Append(',');
+                        count += 1;
+                    }
+                    if (indentSize > 0)
+                    {
+                        Append('\n');
+                        count += 1;
+
+                        WriteIndent(Depth);
+                    }
+                }
+
+                // keys shouldn't affect the write index as it's a pair
+                if (!NeedKey)
+                {
+                    Top.index++;
+                }
+            }
+        }
+        protected void PrepareEndValue(int prevIndex)
+        {
+            if (indentSize > 0 && prevIndex > 0)
+            {
+                Append('\n');
+                count += 1;
+
+                WriteIndent(Depth);
+            }
+        }
+
+        public bool BeginObject()
+        {
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return false;
+            }
+            if (NeedKey)
+            {
+                Error = "Expected writing object key";
+                return false;
+            }
+            if (maxDepth > 0 && Depth >= maxDepth)
+            {
+                Error = $"Exceeded max write depth '{maxDepth}'";
+                return false;
+            }
+
+            PrepareValue();
+            Append('{');
+            count += 1;
+
+            writeStack.Push(SJType.Object);
+
+            // Wait for a key
+            kvState = 1;
+
+            return true;
+        }
+        public bool EndObject()
+        {
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return false;
+            }
+            if (NeedValue)
+            {
+                Error = "Expected writing object value";
+                return false;
+            }
+            if (Top == null || Top.type != SJType.Object)
+            {
+                Error = $"Invalid EndObject for toplevel with type '{Top?.type}', expected Object";
+                return false;
+            }
+
+            // Can end object
+            kvState = 0;
+            int prevIndex = Top.index;
+            writeStack.Pop();
+
+            if (Depth <= 0)
+            {
+                finish = true;
+            }
+            else if (Top.type == SJType.Object)
+            {
+                kvState = 1;
+            }
+
+            PrepareEndValue(prevIndex);
+            Append('}');
+            count += 1;
+
+            return true;
+        }
+        public IDisposable Object() => new ObjectScope(this);
+
+        public bool BeginArray()
+        {
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return false;
+            }
+            if (NeedKey)
+            {
+                Error = "Expected writing object key";
+                return false;
+            }
+            if (maxDepth > 0 && Depth >= maxDepth)
+            {
+                Error = $"Exceeded max write depth '{maxDepth}'";
+                return false;
+            }
+
+            PrepareValue();
+            Append('[');
+            count += 1;
+            kvState = 0;
+
+            writeStack.Push(SJType.Array);
+            return true;
+        }
+        public bool EndArray()
+        {
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return false;
+            }
+            if (NeedKey)
+            {
+                Error = "Expected writing object key";
+                return false;
+            }
+            if (Top == null || Top.type != SJType.Array)
+            {
+                Error = $"Invalid EndObject for toplevel with type '{Top?.type}', expected Array";
+                return false;
+            }
+
+            int prevIndex = Top.index;
+            writeStack.Pop();
+            if (Depth <= 0)
+            {
+                finish = true;
+            }
+            else if (Top.type == SJType.Object)
+            {
+                kvState = 1;
+            }
+
+            PrepareEndValue(prevIndex);
+            Append(']');
+            count += 1;
+
+            return true;
+        }
+        public IDisposable Array() => new ArrayScope(this);
+
+        public virtual bool WriteKey(
+            string name, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None
+        )
+        {
+            if (!NeedKey)
+            {
+                Error = "Did not expect an object key";
+                return false;
+            }
+
+            PrepareValue();
+
+            string escaped = SJEscape.Escape(name, options);
+            Append('"');
+            Append(escaped);
+            Append('"');
+            Append(':');
+            count += 3 + escaped.Length;
+
+            if (indentSize > 0)
+            {
+                Append(' ');
+                count += 1;
+            }
+
+            kvState = 2;
+
+            return true;
+        }
+        public bool WriteNumber(double number, string format = "R")
+        {
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return false;
+            }
+            if (NeedKey)
+            {
+                Error = "Expected writing object key, got WriteNumber";
+                return false;
+            }
+
+            PrepareValue();
+
+            // !! : Number is always appended with InvariantCulture as the decimal point must be '.'/0x2E for JSON
+            string nString = number.ToString(format, CultureInfo.InvariantCulture);
+            Append(nString);
+            count += nString.Length;
+
+            if (Depth <= 0)
+            {
+                // Number is top level
+                finish = true;
+            }
+            else if (Top.type == SJType.Object)
+            {
+                kvState = 1;
+            }
+
+            return true;
+        }
+        public bool WriteLong(long number, string format = "G")
+        {
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return false;
+            }
+            if (NeedKey)
+            {
+                Error = "Expected writing object key, got WriteLong";
+                return false;
+            }
+
+            PrepareValue();
+
+            string nString = number.ToString(format, CultureInfo.InvariantCulture);
+            Append(nString);
+            count += nString.Length;
+
+            if (Depth <= 0)
+            {
+                // Number is top level
+                finish = true;
+            }
+            else if (Top.type == SJType.Object)
+            {
+                kvState = 1;
+            }
+
+            return true;
+        }
+        public bool WriteULong(ulong number, string format = "G")
+        {
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return false;
+            }
+            if (NeedKey)
+            {
+                Error = "Expected writing object key, got WriteLong";
+                return false;
+            }
+
+            PrepareValue();
+
+            string nString = number.ToString(format, CultureInfo.InvariantCulture);
+            Append(nString);
+            count += nString.Length;
+
+            if (Depth <= 0)
+            {
+                // Number is top level
+                finish = true;
+            }
+            else if (Top.type == SJType.Object)
+            {
+                kvState = 1;
+            }
+
+            return true;
+        }
+        public bool WriteString(
+            string value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None
+        )
+        {
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return false;
+            }
+            if (NeedKey)
+            {
+                // eh sure, works, similar intent
+                return WriteKey(value, options);
+            }
+
+            PrepareValue();
+
+            string escaped = SJEscape.Escape(value, options);
+            Append('"');
+            Append(escaped);
+            Append('"');
+            count += escaped.Length + 2;
+
+            if (Depth <= 0)
+            {
+                finish = true;
+            }
+            else if (Top.type == SJType.Object)
+            {
+                kvState = 1;
+            }
+
+            return true;
+        }
+        public bool WriteBool(bool value)
+        {
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return false;
+            }
+            if (NeedKey)
+            {
+                Error = "Expected writing object key, got WriteBool";
+                return false;
+            }
+
+            PrepareValue();
+
+            Append(value ? "true" : "false");
+            count += value ? 4 : 5;
+
+            if (Depth <= 0)
+            {
+                finish = true;
+            }
+            else if (Top.type == SJType.Object)
+            {
+                kvState = 1;
+            }
+
+            return true;
+        }
+        public bool WriteNull()
+        {
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return false;
+            }
+            if (NeedKey)
+            {
+                Error = "Expected writing object key, got WriteNull";
+                return false;
+            }
+
+            PrepareValue();
+
+            Append("null");
+            count += 4;
+
+            if (Depth <= 0)
+            {
+                finish = true;
+            }
+            else if (Top.type == SJType.Object)
+            {
+                kvState = 1;
+            }
+
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Write(float number, string format = "R") => WriteNumber(number, format);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Write(double number, string format = "R") => WriteNumber(number, format);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Write(long number, string format = "G") => WriteLong(number, format);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Write(ulong number, string format = "G") => WriteULong(number, format);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Write(string value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None)
+        {
+            // For the case of "Write" without any "info", the string overload is called for `null`
+            // There will be an explicit check only for this. For anything else, null is treated as `default` or `string.Empty`
+            // Because of this, it is suggested not to use `Write` for keys and strings. For anything else, it will work fine.
+            if (value is null)
+            {
+                return WriteNull();
+            }
+
+            return WriteString(value, options);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Write(bool value) => WriteBool(value);
+
+        public virtual void Reset()
+        {
+            count = 0;
+            kvState = 0;
+            finish = false;
+            Error = null;
+            writeStack.Clear();
+        }
+    }
+}
