@@ -40,6 +40,11 @@ namespace SJ
     /// </example>
     public abstract class SJWriter
     {
+        // A span based writer would be nice, but then I have to pass it
+        // into the method instead of having the span stored inside the writer.
+        // I could create a "SJSpanWriter" that does "the same behaviour",
+        // but it's repeated code. So let's be "heap only" for the time being.
+
         /// <summary>
         /// Exception thrown on an error case while reading JSON.
         /// </summary>
@@ -126,12 +131,6 @@ namespace SJ
         /// Maximum size for <see cref="writeStack"/>
         /// </summary>
         public int maxDepth = 128;
-
-        // state
-        /// <summary>
-        /// Amount written by this writer.
-        /// </summary>
-        public int count;
         protected bool _ThrowOnError = false;
         /// <summary>
         /// When an erroreneous case occurs (or <see cref="Error"/> is set to anything other 
@@ -152,6 +151,12 @@ namespace SJ
                 }
             }
         }
+
+        // state
+        /// <summary>
+        /// Amount written by this writer.
+        /// </summary>
+        public int count;
         protected string _Error = string.Empty;
         /// <summary>
         /// The error string detailing why the writer failed.
@@ -218,6 +223,7 @@ namespace SJ
             throw new WriteException(this);
         }
 
+        // The base writers
         protected void WriteIndent(int depth)
         {
             if (depth <= 0 || indentSize <= 0)
@@ -343,7 +349,6 @@ namespace SJ
 
             return true;
         }
-        public IDisposable Object() => new ObjectScope(this);
 
         public bool BeginArray()
         {
@@ -406,7 +411,6 @@ namespace SJ
 
             return true;
         }
-        public IDisposable Array() => new ArrayScope(this);
 
         public virtual bool WriteKey(
             string name, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None
@@ -437,7 +441,14 @@ namespace SJ
 
             return true;
         }
-        public bool WriteNumber(double number, string format = "R")
+        /// <summary>
+        /// Writes a literal value with the rules for the top level object or array.
+        /// <br><b>Warning :</b> Using this, you can write invalid JSON (because it writes the value as is).
+        /// This method is not recommended for use, unless you know what you are doing.</br>
+        /// </summary>
+        /// <returns>Whether if the write was successful.</returns>
+        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Advanced)]
+        public bool WriteLiteral(string data)
         {
             if (finish)
             {
@@ -446,16 +457,13 @@ namespace SJ
             }
             if (NeedKey)
             {
-                Error = "Expected writing object key, got WriteNumber";
+                Error = "Expected writing object key, got WriteLiteral";
                 return false;
             }
 
             PrepareValue();
-
-            // !! : Number is always appended with InvariantCulture as the decimal point must be '.'/0x2E for JSON
-            string nString = number.ToString(format, CultureInfo.InvariantCulture);
-            Append(nString);
-            count += nString.Length;
+            Append(data);
+            count += data.Length;
 
             if (Depth <= 0)
             {
@@ -469,72 +477,19 @@ namespace SJ
 
             return true;
         }
-        public bool WriteLong(long number, string format = "G")
-        {
-            if (finish)
-            {
-                Error = "Attempt to write into a finished JSONWriter";
-                return false;
-            }
-            if (NeedKey)
-            {
-                Error = "Expected writing object key, got WriteLong";
-                return false;
-            }
-
-            PrepareValue();
-
-            string nString = number.ToString(format, CultureInfo.InvariantCulture);
-            Append(nString);
-            count += nString.Length;
-
-            if (Depth <= 0)
-            {
-                // Number is top level
-                finish = true;
-            }
-            else if (Top.type == SJType.Object)
-            {
-                kvState = 1;
-            }
-
-            return true;
-        }
-        public bool WriteULong(ulong number, string format = "G")
-        {
-            if (finish)
-            {
-                Error = "Attempt to write into a finished JSONWriter";
-                return false;
-            }
-            if (NeedKey)
-            {
-                Error = "Expected writing object key, got WriteLong";
-                return false;
-            }
-
-            PrepareValue();
-
-            string nString = number.ToString(format, CultureInfo.InvariantCulture);
-            Append(nString);
-            count += nString.Length;
-
-            if (Depth <= 0)
-            {
-                // Number is top level
-                finish = true;
-            }
-            else if (Top.type == SJType.Object)
-            {
-                kvState = 1;
-            }
-
-            return true;
-        }
+        public bool WriteNumber(float number, string format = "R") =>
+            WriteLiteral(number.ToString(format, CultureInfo.InvariantCulture));
+        public bool WriteNumber(double number, string format = "R") =>
+            WriteLiteral(number.ToString(format, CultureInfo.InvariantCulture));
+        public bool WriteLong(long number, string format = "G") =>
+            WriteLiteral(number.ToString(format, CultureInfo.InvariantCulture));
+        public bool WriteULong(ulong number, string format = "G") =>
+            WriteLiteral(number.ToString(format, CultureInfo.InvariantCulture));
         public bool WriteString(
             string value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None
         )
         {
+            // This one does some things different enough that it can't be "WriteLiteral"
             if (finish)
             {
                 Error = "Attempt to write into a finished JSONWriter";
@@ -565,65 +520,10 @@ namespace SJ
 
             return true;
         }
-        public bool WriteBool(bool value)
-        {
-            if (finish)
-            {
-                Error = "Attempt to write into a finished JSONWriter";
-                return false;
-            }
-            if (NeedKey)
-            {
-                Error = "Expected writing object key, got WriteBool";
-                return false;
-            }
+        public bool WriteBool(bool value) => WriteLiteral(value ? "true" : "false");
+        public bool WriteNull() => WriteLiteral("null");
 
-            PrepareValue();
-
-            Append(value ? "true" : "false");
-            count += value ? 4 : 5;
-
-            if (Depth <= 0)
-            {
-                finish = true;
-            }
-            else if (Top.type == SJType.Object)
-            {
-                kvState = 1;
-            }
-
-            return true;
-        }
-        public bool WriteNull()
-        {
-            if (finish)
-            {
-                Error = "Attempt to write into a finished JSONWriter";
-                return false;
-            }
-            if (NeedKey)
-            {
-                Error = "Expected writing object key, got WriteNull";
-                return false;
-            }
-
-            PrepareValue();
-
-            Append("null");
-            count += 4;
-
-            if (Depth <= 0)
-            {
-                finish = true;
-            }
-            else if (Top.type == SJType.Object)
-            {
-                kvState = 1;
-            }
-
-            return true;
-        }
-
+        // These are like "extensions"
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Write(float number, string format = "R") => WriteNumber(number, format);
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -645,9 +545,93 @@ namespace SJ
 
             return WriteString(value, options);
         }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Write(bool value) => WriteBool(value);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool WriteKV(string key, float number, string format = "R")
+        {
+            if (!WriteKey(key))
+            {
+                return false;
+            }
+            return WriteNumber(number, format);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool WriteKV(string key, double number, string format = "R")
+        {
+            if (!WriteKey(key))
+            {
+                return false;
+            }
+            return WriteNumber(number, format);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool WriteKV(string key, long number, string format = "G")
+        {
+            if (!WriteKey(key))
+            {
+                return false;
+            }
+            return WriteLong(number, format);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool WriteKV(string key, ulong number, string format = "G")
+        {
+            if (!WriteKey(key))
+            {
+                return false;
+            }
+            return WriteULong(number, format);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool WriteKV(string key, string value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None)
+        {
+            if (!WriteKey(key))
+            {
+                return false;
+            }
+            // No need to "worry about key", but still doing the null thing
+            if (value is null)
+            {
+                return WriteNull();
+            }
+
+            return WriteString(value, options);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool WriteKV(string key, bool value)
+        {
+            if (!WriteKey(key))
+            {
+                return false;
+            }
+            return WriteBool(value);
+        }
+
+        public IDisposable Array() => new ArrayScope(this);
+        public IDisposable ArrayKV(string key)
+        {
+            if (!WriteKey(key))
+            {
+                // No operation is done if key fails.
+                return new ArrayScope();
+            }
+
+            return new ArrayScope(this);
+        }
+
+        public IDisposable Object() => new ObjectScope(this);
+        public IDisposable ObjectKV(string key)
+        {
+            if (!WriteKey(key))
+            {
+                // No operation is done if key fails.
+                return new ObjectScope();
+            }
+
+            return new ObjectScope(this);
+        }
 
         public virtual void Reset()
         {

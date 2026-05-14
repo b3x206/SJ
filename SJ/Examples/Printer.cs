@@ -1,5 +1,5 @@
-﻿using System.Text;
-using System;
+﻿using System;
+using System.Text;
 
 namespace SJ.Examples
 {
@@ -78,7 +78,8 @@ namespace SJ.Examples
 
         static void Main(string[] args)
         {
-            string data = args.Length > 1 ? args[1] : "{ \"foo\": [\"bar\", \"baz\"], \"idk\": 42, \"mango\": { \"6\": 7 } }";
+            string data = args.Length > 1 ? args[1] : 
+                "{ \"foo\": [\"bar\", \"baz\"], \"idk\": 42, \"mango\": { \"6\": 7 } }";
             var reader = new SJStringReader(data);
 
             SJReader.Value root = reader.Read();

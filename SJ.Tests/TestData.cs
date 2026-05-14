@@ -39,6 +39,24 @@ public static class TestData
     ""logic"": [true, false, null],
     ""empty"": { ""obj"": {}, ""arr"": [] }
 }";
+    public const string JsonDataDiscardKey = "secretInfo";
+    public const string JsonDataDiscard = $@"{{
+    ""userName"": ""gamer"",
+    ""password"": ""password"",
+    ""{JsonDataDiscardKey}"": {{
+        ""cardNumber"": 1234123412341234,
+        ""hondaCivic"": 676,
+        ""expiry"": ""6/7"",
+        ""valid"": false
+    }},
+    ""stats"": {{
+        ""score"": 99999999999,
+        ""moneysWasted"": ""9000.24 USD"",
+        ""lifetime"": 12000,
+        ""skill"": 21498124
+    }},
+    ""badAtThisGame"": true
+}}";
     // ↓ the sj.h does not complain what was there before, "if it starts/ends a recursive object it was valid". this one will complain though.
     public const string JsonDataStackingInvalid = @"{
     ""key"": { ""another key"": [{]}, ]

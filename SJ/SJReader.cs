@@ -61,7 +61,7 @@ namespace SJ
     ///     public override int Length => _Data?.Length ?? 0;
     ///     // Because I ported the pointer stuff as-is, some parts of the parser may read off by one.
     ///     // It is recommended to do an bound check and return EOF of your choice
-    ///     protected override char At(int i) => i < Data.Length ? _Data[i] : '\0';
+    ///     protected override char At(int i) => i >= 0 && i < Length ? _Data[i] : '\0';
     ///     // Because each value slice is evaluated lazily, the data ranges must persist and should be representable easily as a range (making arbitrary Streams much harder)
     ///     // Note that there isn't much of a reason to do this, if you read the data as soon as it's received from the SJReader.
     ///     protected override ReadOnlySpan<char> Slice(int start, int length) => string.IsNullOrEmpty(_Data) ? ReadOnlySpan<char>.Empty : _Data.AsSpan(start, length);
@@ -112,6 +112,8 @@ namespace SJ
 
             public static Value Error() => new Value(null, SJType.Error, -1, -1, -1);
             public static Value Error(SJReader reader) => new Value(reader, SJType.Error, -1, -1, -1);
+            public static Value Null() => new Value(null, SJType.Null, -1, -1, -1);
+            public static Value Null(SJReader reader) => new Value(reader, SJType.Null, -1, -1, -1);
 
             public readonly int Length
             {
@@ -350,7 +352,7 @@ namespace SJ
         public virtual Value Read()
         {
             lastRecursableTypes ??= new Stack<SJType>();
-            Value result = new Value(this);
+            var result = new Value(this);
         _Top:
             if (!string.IsNullOrEmpty(Error))
             {
@@ -546,7 +548,7 @@ namespace SJ
         /// </summary>
         protected void DiscardUntil(int depth)
         {
-            Value value = new Value(this) { type = SJType.Null };
+            var value = Value.Null();
             while (this.depth != depth && value.type != SJType.Error)
             {
                 value = Read();
