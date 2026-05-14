@@ -5,7 +5,7 @@ namespace SJ.Tests;
 [TestClass]
 public sealed class WriterUnitTests
 {
-    static void WriteTestValues(SJWriter writer)
+    static bool WriteTestValues(SJWriter writer)
     {
         ArgumentNullException.ThrowIfNull(writer);
         if (writer.Depth <= 0)
@@ -13,6 +13,8 @@ public sealed class WriterUnitTests
             throw new ArgumentException("Can't write test values to top level object.", nameof(writer));
         }
 
+        // golang core :
+        bool success = string.IsNullOrEmpty(writer.Error);
         switch (writer.Top.type)
         {
             case SJType.Object:
@@ -21,76 +23,93 @@ public sealed class WriterUnitTests
                     if (writer.NeedValue)
                     {
                         Console.WriteLine($"The writer {writer} was expecting a value. Setting that key null.");
-                        writer.WriteNull();
+                        success = success && writer.WriteNull();
                     }
 
-                    writer.WriteKey("yes");
-                    writer.Write(true);
+                    success = success && writer.WriteKey("yes");
+                    success = success && writer.Write(true);
 
-                    writer.WriteKey("no");
-                    writer.Write(false);
+                    success = success && writer.WriteKey("no");
+                    success = success && writer.Write(false);
 
-                    writer.WriteKey("maybe");
-                    writer.WriteNull();
+                    success = success && writer.WriteKey("maybe");
+                    success = success && writer.WriteNull();
 
-                    writer.WriteKey("strings");
-                    writer.Write("Did you know : Every minute in here, 60 seconds pass. But when I'm programming, every key press makes minute pass in twice the speed!");
+                    success = success && writer.WriteKey("strings");
+                    success = success && writer.Write("Did you know : Every minute in here 60 seconds pass. But when I'm programming every key press makes minute pass in twice the speed!");
 
-                    writer.WriteKey("integer number");
-                    writer.Write(12345 + 67740);
+                    success = success && writer.WriteKey("integer number");
+                    success = success && writer.Write(12345 + 67740);
 
-                    writer.WriteKey("float number");
-                    writer.Write(Math.Sin(Math.PI * 0.245) * 100);
+                    success = success && writer.WriteKey("float number");
+                    success = success && writer.Write(Math.Sin(Math.PI * 0.245) * 100);
 
-                    writer.WriteKey("array");
-                    using (writer.Array())
-                    {
-                        for (int i = 0; i < 5; i++)
+                    // Use WriteKV
+                    success = success && writer.WriteKV("yes 2", true);
+                    success = success && writer.WriteKV("no 2", false);
+                    success = success && writer.WriteKV("maybe 2", null);
+                    success = success && writer.WriteKV("strings 2", "bla bla bla");
+                    success = success && writer.WriteKV("calc short for calc", 50 + 3 - 7 + 12 - 5 + 24 - 12 + 53 + -12 - 40 + 1);
+                    success = success && writer.WriteKV("some number", Math.ScaleB(2.5, 4));
+
+                    success = success && writer.WriteKey("array");
+                    if (success)
+                        using (writer.Array())
                         {
-                            writer.Write(i + 1);
+                            for (int i = 0; i < 5; i++)
+                            {
+                                success = success && writer.Write(i + 1);
+                            }
                         }
-                    }
-
-                    writer.WriteKey("object");
-                    using (writer.Object())
-                    {
-                        writer.WriteKey("uhhh");
-                        writer.Write("idk..");
-                    }
+                    success = success && writer.WriteKey("object");
+                    if (success)
+                        using (writer.Object())
+                        {
+                            success = success && writer.WriteKey("uhhh");
+                            success = success && writer.Write("idk..");
+                        }
                     break;
                 }
             case SJType.Array:
                 {
                     if (writer.NeedValue)
                     {
-                        Console.WriteLine($"The writer {writer} was expecting a value. Setting that key null.");
-                        writer.WriteNull();
+                        Console.WriteLine(
+                            $"The writer {writer} was expecting a value." +
+                            $"Setting that key null. Wait a minute"
+                        );
+                        Assert.Fail("NeedValue is true while supposedly on an array.");
                     }
-                    writer.Write(true);
-                    writer.Write(false);
-                    writer.WriteNull();
-                    writer.Write("Did you know : Every minute in here, 60 seconds pass.");
-                    writer.Write(12345 + 67740);
-                    writer.Write(Math.Sin(Math.PI * 0.245) * 100);
 
-                    using (writer.Array())
-                    {
-                        for (int i = 0; i < 5; i++)
+                    success = success && writer.Write(true);
+                    success = success && writer.Write(false);
+                    success = success && writer.WriteNull();
+                    success = success && writer.Write("Did you know : Every minute in here, 60 seconds pass.");
+                    success = success && writer.Write(12345 + 67740);
+                    success = success && writer.Write(Math.Sin(Math.PI * 0.245) * 100);
+
+                    if (success)
+                        using (writer.Array())
                         {
-                            writer.Write(i + 1);
+                            for (int i = 0; i < 5; i++)
+                            {
+                                success = success && writer.Write(i + 1);
+                            }
                         }
-                    }
 
-                    using (writer.Object())
-                    {
-                        writer.WriteKey("uhhh");
-                        writer.Write("idk..");
-                    }
+                    if (success)
+                        using (writer.Object())
+                        {
+                            success = success && writer.WriteKey("uhhh");
+                            success = success && writer.Write("idk..");
+                        }
                     break;
                 }
             default:
                 throw new ArgumentException($"Unexpected top level type {writer.Top.type}", nameof(writer));
         }
+
+        return success;
     }
     [TestMethod]
     public void TestRootWrite()
@@ -138,6 +157,8 @@ public sealed class WriterUnitTests
         writer.Reset();
 
         // Floating point numbers are somewhat indeterminate, so use the same format and hope for the best.
+        // Note : SJWriter used to write floats using double, but now it writes using float.
+        //        So the ToString behaviour should be same.
         const float FloatVal = 1.234f;
         writer.Write(FloatVal, FloatFmt);
         Assert.AreEqual(((double)FloatVal).ToString(FloatFmt, numberCulture), writer.ToString());
@@ -168,7 +189,13 @@ public sealed class WriterUnitTests
         // Writing an object that looks like this.
         using (writer.Object())
         {
-            WriteTestValues(writer);
+            // Though ThrowOnError is true, so :shrug:
+            Assert.IsTrue(WriteTestValues(writer), "Writing must go without any errors");
+
+            using (writer.ArrayKV("test on le array"))
+            {
+                Assert.IsTrue(WriteTestValues(writer), "Writing must go without any errors");
+            }
         }
 
         // Read resulting data
@@ -193,7 +220,6 @@ public sealed class WriterUnitTests
 
         return false;
     }
-
     [TestMethod]
     [ExpectedException(typeof(SJWriter.WriteException))]
     public void TestDepth()
@@ -232,7 +258,6 @@ public sealed class WriterUnitTests
 
         return result;
     }
-
     [TestMethod]
     [ExpectedException(typeof(SJWriter.WriteException))]
     public void TestStack()

@@ -124,6 +124,45 @@ public sealed class ReaderUnitTests
     [TestMethod]
     public void TestSlightlyComplicated() => Read(JsonData2);
     [TestMethod]
+    public void TestDiscard()
+    {
+        // Manual reading
+        var reader = new SJStringReader(JsonDataDiscard)
+        {
+            ThrowOnError = true
+        };
+
+        var root = reader.Read();
+        while (reader.IterateObject(root, out var k, out var v))
+        {
+            if (k.Slice().Equals(JsonDataDiscardKey, StringComparison.Ordinal))
+            {
+                Console.WriteLine($"Skipping very secret key '{k.Slice()}'");
+                continue;
+            }
+
+            switch (v.type)
+            {
+                default:
+                    Console.WriteLine($"{k.Slice()} : {v.Slice()}");
+                    break;
+
+                case SJType.Object:
+                    while (reader.IterateObject(v, out var k2, out var v2))
+                    {
+                        Console.WriteLine($"{k2.Slice()} : {v2.Slice()}");
+                    }
+                    break;
+                case SJType.Array:
+                    while (reader.IterateArray(v, out var av))
+                    {
+                        Console.WriteLine(new string(av.Slice()));
+                    }
+                    break;
+            }
+        }
+    }
+    [TestMethod]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestStacking() => Read(JsonDataStackingInvalid);
     [TestMethod]

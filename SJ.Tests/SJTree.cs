@@ -186,7 +186,9 @@ sealed class SJTree
             indentSize = 4
         });
 
-        /*
+        /* TODO : Remove this from full after merging and diverging both branches.
+         * I want to fast forward, so I want to keep stuff from the master branch too.
+         * Both branches will be cleaned up soon.
         switch (type)
         {
             default:
