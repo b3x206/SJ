@@ -13,7 +13,7 @@ namespace SJ
 
         public SJStringWriter(StringBuilder sb)
         {
-            this.sb = sb ?? throw new System.ArgumentNullException(nameof(sb));
+            this.sb = sb ?? throw new ArgumentNullException(nameof(sb));
         }
         public SJStringWriter()
         {

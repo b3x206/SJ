@@ -1,5 +1,6 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
+using System.Text;
 
 namespace SJ.Benchmark
 {
@@ -19,28 +20,6 @@ namespace SJ.Benchmark
         const int NWriteElem = 32;
         const int NWriteLargeElem = 256;
         const int WriteIntoArrayEveryN = 8;
-        static readonly string[] Values = [
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-            "Cras facilisis odio vel vehicula porta.",
-            "Vestibulum at lorem convallis, imperdiet nisl sit amet, blandit quam.",
-
-            "Maecenas viverra dui vel egestas porta.",
-            "Vestibulum aliquet lacus non neque placerat sollicitudin.",
-            "Nam tempus nibh sit amet ultricies vestibulum.",
-            "Nulla malesuada lectus ac urna varius iaculis.",
-            "Pellentesque facilisis nisi sollicitudin dui efficitur venenatis.",
-
-            "Morbi fringilla ante finibus magna bibendum, in varius justo aliquam.",
-            "Fusce et erat dignissim, fringilla libero maximus, luctus est.",
-            "Phasellus eget mi sagittis, mollis diam non, mollis tellus.",
-            "Vivamus nec mauris eget nisi mattis lacinia.",
-
-            "Donec vitae justo in magna rutrum pellentesque.",
-            "Ut nec tellus nec dui lacinia pharetra.",
-
-            "Vestibulum viverra purus id sem varius, ut porta metus ullamcorper.",
-            "Ut a dolor placerat, eleifend leo eget, semper sem.",
-        ];
 
         [GlobalSetup]
         public void Setup()
@@ -115,7 +94,8 @@ namespace SJ.Benchmark
         static SJWriter BenchWrite(SJWriter writer, int elemCount)
         {
             writer.Reset();
-            Span<char> key = stackalloc char[16];
+            Span<char> key = stackalloc char[8];
+            Span<char> value = stackalloc char[8];
 
             for (int i = 0; i < NWrite; i++)
             {
@@ -124,7 +104,8 @@ namespace SJ.Benchmark
                     for (int j = 0; j < elemCount; j++)
                     {
                         RandomString(ref key);
-                        writer.WriteKV(key, Values[j % Values.Length]);
+                        RandomString(ref value);
+                        writer.WriteKV(key, value);
 
                         // when will i learn.. it's cleaner to start a "sub loop" rather than to defer behaviour
                         // while there isn't any clean "defer" built into the language.
@@ -134,7 +115,8 @@ namespace SJ.Benchmark
                             {
                                 using (writer.Array())
                                 {
-                                    writer.WriteString(Values[j % Values.Length]);
+                                    RandomString(ref value);
+                                    writer.WriteString(value);
                                 }
                             }
                         }
@@ -143,12 +125,34 @@ namespace SJ.Benchmark
             }
 
             // To not discard the processed value
+            Console.WriteLine($"Writer count : {writer.count}, elemCount : {elemCount}");
+            return writer;
+        }
+#pragma warning disable CA1822
+        [Benchmark]
+        public SJWriter WriteBasic()
+        {
+            // {"1":1,...}
+            var writer = new SJStringWriter((NWriteElem * 5) + 8);
+            Span<char> digitChar = stackalloc char[1];
+
+            using (writer.Object())
+            {
+                for (int i = 0; i < NWriteElem; i++)
+                {
+                    int v = i % 10;
+                    digitChar[0] = (char)(v + '0');
+                    writer.WriteKV(digitChar, v);
+                }
+            }
+
             return writer;
         }
         [Benchmark]
         public SJWriter Write() => BenchWrite(new SJStringWriter(), NWriteElem);
         [Benchmark]
         public SJWriter WriteLarge() => BenchWrite(new SJStringWriter(), NWriteLargeElem);
+#pragma warning restore CA1822
     }
 
     sealed class Program
@@ -156,7 +160,6 @@ namespace SJ.Benchmark
         public static void Main(string[] args)
         {
             var summary = BenchmarkRunner.Run<SJBenchmark>();
-            Console.WriteLine(summary);
         }
     }
 }

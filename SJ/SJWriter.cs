@@ -259,12 +259,12 @@ namespace SJ
                     if (Top.index > 0)
                     {
                         Append(',');
-                        count += 1;
+                        count++;
                     }
                     if (indentSize > 0)
                     {
                         Append('\n');
-                        count += 1;
+                        count++;
 
                         WriteIndent(Depth);
                     }
@@ -282,7 +282,7 @@ namespace SJ
             if (indentSize > 0 && prevIndex > 0)
             {
                 Append('\n');
-                count += 1;
+                count++;
 
                 WriteIndent(Depth);
             }
@@ -308,7 +308,7 @@ namespace SJ
 
             PrepareValue();
             Append('{');
-            count += 1;
+            count++;
 
             writeStack.Push(SJType.Object);
 
@@ -351,7 +351,7 @@ namespace SJ
 
             PrepareEndValue(prevIndex);
             Append('}');
-            count += 1;
+            count++;
 
             return true;
         }
@@ -376,7 +376,7 @@ namespace SJ
 
             PrepareValue();
             Append('[');
-            count += 1;
+            count++;
             kvState = 0;
 
             writeStack.Push(SJType.Array);
@@ -413,7 +413,7 @@ namespace SJ
 
             PrepareEndValue(prevIndex);
             Append(']');
-            count += 1;
+            count++;
 
             return true;
         }
@@ -446,7 +446,7 @@ namespace SJ
             if (indentSize > 0)
             {
                 Append(' ');
-                count += 1;
+                count++;
             }
 
             kvState = 2;
