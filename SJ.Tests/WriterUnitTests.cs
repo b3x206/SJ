@@ -117,6 +117,7 @@ public sealed class WriterUnitTests
         Assert.IsFalse(writer.Write("Real or fake? No no fake!"), "Writing should fail");
     }
 
+    // TODO : Allow supplying of a custom writer type
     [TestMethod]
     public void TestRootWrite()
     {
