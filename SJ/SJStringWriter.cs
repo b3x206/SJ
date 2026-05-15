@@ -1,34 +1,35 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 
 namespace SJ
 {
     /// <summary>
     /// Writes JSON to a <see cref="StringBuilder"/>
     /// </summary>
-    public sealed class SJStringBuilderWriter : SJWriter
+    public sealed class SJStringWriter : SJWriter
     {
         private readonly StringBuilder sb;
-        public const int DefaultCapacity = 512;
+        public const int DefaultCapacity = 256;
 
-        public SJStringBuilderWriter(StringBuilder sb)
+        public SJStringWriter(StringBuilder sb)
         {
             this.sb = sb ?? throw new System.ArgumentNullException(nameof(sb));
         }
-        public SJStringBuilderWriter()
+        public SJStringWriter()
         {
             sb = new StringBuilder(DefaultCapacity);
         }
-        public SJStringBuilderWriter(int capacity)
+        public SJStringWriter(int capacity)
         {
             sb = new StringBuilder(capacity);
         }
-        public SJStringBuilderWriter(int capacity, int maxCapacity)
+        public SJStringWriter(int capacity, int maxCapacity)
         {
             sb = new StringBuilder(capacity, maxCapacity);
         }
 
         public override void Append(char c) => sb.Append(c);
-        public override void Append(string s) => sb.Append(s);
+        public override void Append(ReadOnlySpan<char> s) => sb.Append(s);
 
         public override void Reset()
         {

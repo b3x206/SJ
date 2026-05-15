@@ -22,26 +22,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Files\5mb.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Files\5mb.min.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Files\binary.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Files\missing_colon.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Files\unterminated.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Files\valid.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Large1.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+	<Content Include="..\TestFiles\**">
+	  <Link>TestFiles\%(RecursiveDir)%(Filename)%(Extension)</Link>
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</Content>
   </ItemGroup>
 </Project>

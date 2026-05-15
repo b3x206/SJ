@@ -47,6 +47,7 @@ namespace SJ
             }
         }
         private static void To4DigitHex(char c, ref Span<char> chars) => To4DigitHex(c, 0, ref chars);
+        private static void SBAppendAction(StringBuilder sb, char c) => sb.Append(c);
 
         /// <summary>
         /// Escapes <paramref name="content"/> according to JSON. 
@@ -55,13 +56,15 @@ namespace SJ
         /// <param name="appendAction">Action called when a character is to be appended into the arbitrary buffer.</param>
         /// <param name="content">Content to escape, this mustn't have broken surrogate pairs.</param>
         /// <exception cref="ArgumentException"></exception>
-        public static void Escape<TSelf>(TSelf self, Action<TSelf, char> appendAction, ReadOnlySpan<char> content, EscapeOptions escapeOpts = EscapeOptions.None)
+        /// <returns>Count of written characters.</returns>
+        public static int Escape<TSelf>(TSelf self, Action<TSelf, char> appendAction, ReadOnlySpan<char> content, EscapeOptions escapeOpts = EscapeOptions.None)
         {
             if (appendAction is null)
             {
                 throw new ArgumentNullException(nameof(appendAction));
             }
 
+            int count = 0;
             Span<char> hex = stackalloc char[4];
 
             // https://www.ietf.org/rfc/rfc4627.txt
@@ -74,30 +77,37 @@ namespace SJ
                     case '"':
                         appendAction(self, '\\');
                         appendAction(self, cur);
+                        count += 2;
                         continue;
                     case '\\':
                         appendAction(self, '\\');
                         appendAction(self, cur);
+                        count += 2;
                         continue;
                     case '\b':
                         appendAction(self, '\\');
                         appendAction(self, 'b');
+                        count += 2;
                         continue;
                     case '\f':
                         appendAction(self, '\\');
                         appendAction(self, 'f');
+                        count += 2;
                         continue;
                     case '\n':
                         appendAction(self, '\\');
                         appendAction(self, 'n');
+                        count += 2;
                         continue;
                     case '\r':
                         appendAction(self, '\\');
                         appendAction(self, 'r');
+                        count += 2;
                         continue;
                     case '\t':
                         appendAction(self, '\\');
                         appendAction(self, 't');
+                        count += 2;
                         continue;
                 }
 
@@ -110,6 +120,7 @@ namespace SJ
                     for (int j = 0; j < hex.Length; j++)
                     {
                         appendAction(self, hex[j]);
+                        count++;
                     }
 
                     continue;
@@ -132,6 +143,7 @@ namespace SJ
                     for (int j = 0; j < hex.Length; j++)
                     {
                         appendAction(self, hex[j]);
+                        count++;
                     }
 
                     To4DigitHex(next, ref hex);
@@ -140,9 +152,10 @@ namespace SJ
                     for (int j = 0; j < hex.Length; j++)
                     {
                         appendAction(self, hex[j]);
+                        count++;
                     }
 
-                    // iterate twice for pair
+                    // iterate char twice for pair
                     i++;
                     continue;
                 }
@@ -156,19 +169,23 @@ namespace SJ
                     for (int j = 0; j < hex.Length; j++)
                     {
                         appendAction(self, hex[j]);
+                        count++;
                     }
 
                     continue;
                 }
 
                 appendAction(self, cur);
+                count++;
             }
+
+            return count;
         }
         /// <inheritdoc cref="Escape{TSelf}(TSelf, Action{TSelf, char}, ReadOnlySpan{char}, EscapeOptions)"/>
         public static string Escape(ReadOnlySpan<char> content, EscapeOptions escapeOpts = EscapeOptions.None)
         {
             var sb = new StringBuilder(content.Length + (content.Length / 2)); // Content is "shorter"
-            Escape(sb, (s, c) => s.Append(c), content, escapeOpts);
+            Escape(sb, SBAppendAction, content, escapeOpts);
             return sb.ToString();
         }
         /// <inheritdoc cref="Escape{TSelf}(TSelf, Action{TSelf, char}, ReadOnlySpan{char}, EscapeOptions)"/>
@@ -180,13 +197,15 @@ namespace SJ
         /// </summary>
         /// <param name="appendAction">Action called when a character is to be appended into the arbitrary buffer.</param>
         /// <param name="content">Content to unescape.</param>
-        public static void Unescape<TSelf>(TSelf self, Action<TSelf, char> appendAction, ReadOnlySpan<char> content)
+        /// <returns>Count of written characters.</returns>
+        public static int Unescape<TSelf>(TSelf self, Action<TSelf, char> appendAction, ReadOnlySpan<char> content)
         {
             if (appendAction is null)
             {
                 throw new ArgumentNullException(nameof(appendAction));
             }
 
+            int count = 0;
             // This method is "more lenient" about incorrect escape characters.
             for (int i = 0; i < content.Length; i++)
             {
@@ -198,6 +217,7 @@ namespace SJ
                     if (i >= content.Length)
                     {
                         appendAction(self, cur);
+                        count++;
                         continue;
                     }
 
@@ -209,22 +229,28 @@ namespace SJ
                         case '"':
                         case '\\':
                             appendAction(self, cur);
+                            count++;
                             continue;
 
                         case 'b':
                             appendAction(self, '\b');
+                            count++;
                             continue;
                         case 'f':
                             appendAction(self, '\f');
+                            count++;
                             continue;
                         case 'n':
                             appendAction(self, '\n');
+                            count++;
                             continue;
                         case 'r':
                             appendAction(self, '\r');
+                            count++;
                             continue;
                         case 't':
                             appendAction(self, '\t');
+                            count++;
                             continue;
 
                         case 'u':
@@ -248,11 +274,13 @@ namespace SJ
                                 {
                                     // UTF-16 point
                                     appendAction(self, (char)(result & char.MaxValue));
+                                    count++;
                                     i += nDigit;
                                 }
                                 else
                                 {
                                     appendAction(self, cur);
+                                    count++;
                                 }
 
                                 continue;
@@ -260,18 +288,22 @@ namespace SJ
 
                         default:
                             appendAction(self, cur);
+                            count++;
                             continue;
                     }
                 }
 
                 appendAction(self, cur);
+                count++;
             }
+
+            return count;
         }
         /// <inheritdoc cref="Unescape{TSelf}(TSelf, Action{TSelf, char}, ReadOnlySpan{char})"/>
         public static string Unescape(ReadOnlySpan<char> content)
         {
             var sb = new StringBuilder(content.Length); // Content is "longer"
-            Unescape(sb, (s, c) => s.Append(c), content);
+            Unescape(sb, SBAppendAction, content);
             return sb.ToString();
         }
         /// <inheritdoc cref="Unescape{TSelf}(TSelf, Action{TSelf, char}, ReadOnlySpan{char})"/>

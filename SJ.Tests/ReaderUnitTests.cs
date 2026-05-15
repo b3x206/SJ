@@ -123,11 +123,10 @@ public sealed class ReaderUnitTests
     public void TestBasicInvalid() => Read(JsonDataInvalid);
     [TestMethod]
     public void TestSlightlyComplicated() => Read(JsonData2);
-    [TestMethod]
-    public void TestDiscard()
+    static void TestDiscard(string discardData, string discardKey = JsonDataDiscardKey)
     {
         // Manual reading
-        var reader = new SJStringReader(JsonDataDiscard)
+        var reader = new SJStringReader(discardData)
         {
             ThrowOnError = true
         };
@@ -135,7 +134,7 @@ public sealed class ReaderUnitTests
         var root = reader.Read();
         while (reader.IterateObject(root, out var k, out var v))
         {
-            if (k.Slice().Equals(JsonDataDiscardKey, StringComparison.Ordinal))
+            if (k.Slice().Equals(discardKey, StringComparison.Ordinal))
             {
                 Console.WriteLine($"Skipping very secret key '{k.Slice()}'");
                 continue;
@@ -148,20 +147,27 @@ public sealed class ReaderUnitTests
                     break;
 
                 case SJType.Object:
+                    Console.WriteLine($"{k.Slice()} :");
                     while (reader.IterateObject(v, out var k2, out var v2))
                     {
-                        Console.WriteLine($"{k2.Slice()} : {v2.Slice()}");
+                        Console.WriteLine($"  {k2.Slice()} : {v2.Slice()}");
                     }
                     break;
                 case SJType.Array:
+                    Console.WriteLine($"{k.Slice()} :");
                     while (reader.IterateArray(v, out var av))
                     {
-                        Console.WriteLine(new string(av.Slice()));
+                        Console.WriteLine($"  {av.Slice()}");
                     }
                     break;
             }
         }
     }
+    [TestMethod]
+    public void TestDiscard() => TestDiscard(JsonDataDiscard);
+    [TestMethod]
+    [ExpectedException(typeof(SJReader.ReadException))]
+    public void TestDiscardInvalid() => TestDiscard(JsonDataDiscardInvalid);
     [TestMethod]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestStacking() => Read(JsonDataStackingInvalid);

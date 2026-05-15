@@ -114,7 +114,7 @@ sealed class SJTree
         }
     }
 
-    public static string ToJSON(SJTree tree) => ToJSON(tree, new SJStringBuilderWriter()
+    public static string ToJSON(SJTree tree) => ToJSON(tree, new SJStringWriter()
     {
         ThrowOnError = true
     });
@@ -180,7 +180,7 @@ sealed class SJTree
 
     public override string ToString()
     {
-        return ToJSON(this, new SJStringBuilderWriter()
+        return ToJSON(this, new SJStringWriter()
         {
             ThrowOnError = true,
             indentSize = 4

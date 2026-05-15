@@ -1,4 +1,5 @@
-﻿using static SJ.Tests.TestData;
+﻿using System.Text;
+using static SJ.Tests.TestData;
 
 namespace SJ.Tests;
 
@@ -7,11 +8,18 @@ public sealed class EscapeUnitTests
 {
     static void TestEscapeUnescape(string content)
     {
+        var sb = new StringBuilder(content.Length * 2);
+        var sbUnescaped = new StringBuilder(content.Length);
         foreach (var opts in Enum.GetValues<SJEscape.EscapeOptions>())
         {
-            string escaped = SJEscape.Escape(content, opts);
-            string unescaped = SJEscape.Unescape(escaped);
-            Assert.AreEqual(content, unescaped);
+            int escapeCount = SJEscape.Escape(sb, static (s, c) => s.Append(c), content, opts);
+            Assert.AreEqual(sb.Length, escapeCount);
+
+            int unescapeCount = SJEscape.Unescape(sbUnescaped, static (s, c) => s.Append(c), content);
+            Assert.AreEqual(sbUnescaped.Length, unescapeCount);
+            Console.WriteLine($"unescaped : {sbUnescaped}, content: {content}, len(unescaped: {unescapeCount})");
+
+            Assert.AreEqual(content, sbUnescaped.ToString());
         }
     }
 

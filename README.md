@@ -81,7 +81,7 @@ switch (SJReader.Value.type)
 This is used as the default string escape for the Writer.
 
 ### Writer
-Use the [`SJStringBuilderWriter`](./SJ/SJStringBuilderWriter.cs) class to get started.
+Use the [`SJStringWriter`](SJ/SJStringWriter.cs) class to get started.
 
 ```cs
 using SJ;
@@ -92,7 +92,7 @@ using System.Globalization;
 static Vector3 ReadVector3(SJReader reader, SJReader.Value root) ... // Copy the method from above
 
 // Serialize an arbitrary Vector3
-var writer = new SJStringBuilderWriter()
+var writer = new SJStringWriter()
 {
     // Enable pretty printing
     indentSize = 4,
@@ -112,6 +112,42 @@ position = ReadVector3(reader, reader.Read());
 
 Console.WriteLine($"Saved Position : {writer}, Read Position : {position}");
 ```
+
+<!-- TODO : Work In Progress
+Benchmarks
+* Read = Read a [small file (valid.json)](TestFiles/valid.json) 256 times
+* ReadLarge = Read a [large file (5mb.json)](TestFiles/5mb.json) 16 times
+* Write = Write a small file (`{ "random_key": "random_value", ... 32 times }`) 256 times
+* WriteLarge = Write a small file (`{ "random_key": "random_value", ... 256 times }`) 256 times
+```
+BenchmarkDotNet v0.15.8, Linux Debian GNU/Linux 13 (trixie)
+13th Gen Intel Core i7-13620H 2.92GHz, 1 CPU, 16 logical and 8 physical cores
+.NET SDK 8.0.421
+  [Host]     : .NET 8.0.27 (8.0.27, 8.0.2726.22922), X64 RyuJIT x86-64-v3
+  DefaultJob : .NET 8.0.27 (8.0.27, 8.0.2726.22922), X64 RyuJIT x86-64-v3
+
+
+| Method    | Mean      | Error    | StdDev   | Allocated |
+|---------- |----------:|---------:|---------:|----------:|
+| Read      |  33.35 ms | 0.385 ms | 0.360 ms |     136 B |
+| ReadLarge | 189.11 ms | 0.991 ms | 0.827 ms |     136 B |
+
+// * Hints *
+Outliers
+  SJBenchmark.ReadLarge: Default -> 2 outliers were removed (192.00 ms, 192.34 ms)
+
+// * Legends *
+  Mean      : Arithmetic mean of all measurements
+  Error     : Half of 99.9% confidence interval
+  StdDev    : Standard deviation of all measurements
+  Allocated : Allocated memory per single operation (managed only, inclusive, 1KB = 1024B)
+  1 ms      : 1 Millisecond (0.001 sec)
+
+// * Diagnostic Output - MemoryDiagnoser *
+```
+
+Reader provides a basic 434.157136 MB/s mean throughput. (while apps and visual studio is open)
+-->
 
 ---
 

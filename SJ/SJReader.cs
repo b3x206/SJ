@@ -388,12 +388,14 @@ namespace SJ
             // Validate : Comments
             else if (allowComments && ch == '/')
             {
-                // Perhaps I could have added a "JSONType.Comment" Value, but the problems are :
+                // Perhaps I could have added a "SJType.Comment" Value, but the problems are :
                 // 1: Comments can be placed anywhere and are not "strictly structured"
                 // 2: Comments will require calling Read() (not a big problem) and doing while (!EOF) {} (is the bigger problem.
                 // the top "reading call stack" is popped without any "moving forward" and the chance for an error to be thrown)
-                // Though they aren't recursive, so that's a "bonus". I could add it later.
-                SkipComment();
+                // Though they aren't recursive, so that's a "bonus".
+                // I could add it later, requiring calling "Read" and yielding back when the SJType is Comment (also checking EOF?)
+                // To not break compatibility, I could add "ignoreComments = true" by default to skip comments while reading.
+                SkipComment(); // This sets Error
                 goto _Top;
             }
             // Validate : Object == KV Colon, Array == Comma

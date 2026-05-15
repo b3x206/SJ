@@ -220,8 +220,7 @@ namespace SJ.Examples
             var reader = new SJStringReader(data);
             var tree = SJTree.FromJSON(reader);
 
-            Console.WriteLine("Parsed Tree :");
-            Console.WriteLine(tree.ToString());
+            Console.WriteLine($"Parsed Tree : {tree}");
         }
     }
 }
