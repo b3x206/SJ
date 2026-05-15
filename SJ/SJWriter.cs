@@ -23,7 +23,7 @@ namespace SJ
     ///     }
     /// 
     ///     public override void Append(char c) => data.Write(c);
-    ///     public override void Append(string s) => data.Write(s);
+    ///     public override void Append(ReadOnlySpan<char> s) => data.Write(s);
     /// 
     ///     public override void Reset()
     ///     {
@@ -200,15 +200,15 @@ namespace SJ
 
         /// <summary>
         /// Append to the underlying StringBuilder/Stream-like object.
-        /// <br>You can use this to write literals in any position, but it isn't recommended.</br>
+        /// <br>You can use this to write anything in anywhere, but it isn't recommended.</br>
         /// </summary>
         public abstract void Append(char c);
         /// <summary>
         /// <inheritdoc cref="Append(char)"/>
         /// </summary>
-        public virtual void Append(string s)
+        public virtual void Append(ReadOnlySpan<char> s)
         {
-            for (int i = 0; i < s?.Length; i++)
+            for (int i = 0; i < s.Length; i++)
             {
                 Append(s[i]);
             }
@@ -224,6 +224,7 @@ namespace SJ
         }
 
         // The base writers
+        private static void SJSelfAppend(SJWriter writer, char c) => writer.Append(c);
         protected void WriteIndent(int depth)
         {
             if (depth <= 0 || indentSize <= 0)
@@ -231,12 +232,17 @@ namespace SJ
                 return;
             }
 
-            string indent = string.Create(indentSize, ' ', (s, c) => { for (int i = 0; i < s.Length; i++) { s[i] = c; } });
+            Span<char> indent = indentSize < 32 ? stackalloc char[indentSize] : new char[indentSize];
+            for (int i = 0; i < indent.Length; i++) { indent[i] = ' '; }
             for (int i = 0; i < depth; i++)
             {
                 Append(indent);
             }
             count += indentSize * depth;
+        }
+        protected void WriteEscaped(ReadOnlySpan<char> data, SJEscape.EscapeOptions options)
+        {
+            count += SJEscape.Escape(this, SJSelfAppend, data, options);
         }
         protected void PrepareValue()
         {
@@ -412,8 +418,15 @@ namespace SJ
             return true;
         }
 
+        /// <summary>
+        /// Write a key, while <see cref="NeedKey"/> is true.
+        /// <br><b>Info :</b> Base implementation does not check duplicates.</br>
+        /// </summary>
+        /// <param name="name">Name of the key entry.</param>
+        /// <param name="options">Options for escaping the <paramref name="name"/> string.</param>
+        /// <returns>Whether if the write was successful.</returns>
         public virtual bool WriteKey(
-            string name, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None
+            ReadOnlySpan<char> name, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None
         )
         {
             if (!NeedKey)
@@ -424,12 +437,11 @@ namespace SJ
 
             PrepareValue();
 
-            string escaped = SJEscape.Escape(name, options);
-            Append('"');
-            Append(escaped);
-            Append('"');
-            Append(':');
-            count += 3 + escaped.Length;
+            Append('"'); count++;
+            WriteEscaped(name, options);
+            Append('"'); count++;
+
+            Append(':'); count++;
 
             if (indentSize > 0)
             {
@@ -443,12 +455,16 @@ namespace SJ
         }
         /// <summary>
         /// Writes a literal value with the rules for the top level object or array.
-        /// <br><b>Warning :</b> Using this, you can write invalid JSON (because it writes the value as is).
+        /// <br><b>Warning :</b> Using this, you can write invalid JSON
+        /// (because it writes the value as is, but with the value rules and indenting).
         /// This method is not recommended for use, unless you know what you are doing.</br>
+        /// <br>If on a object or array, comma is appended before the <paramref name="data"/> 
+        /// (on <see cref="PrepareValue"/>). Prefer <c>/* */</c> style comment 
+        /// blocks if you want to write comments.</br>
+        /// <br>This also can be used as a faster way to write numbers.</br>
         /// </summary>
         /// <returns>Whether if the write was successful.</returns>
-        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Advanced)]
-        public bool WriteLiteral(string data)
+        public virtual bool WriteLiteralValue(ReadOnlySpan<char> data)
         {
             if (finish)
             {
@@ -462,6 +478,7 @@ namespace SJ
             }
 
             PrepareValue();
+
             Append(data);
             count += data.Length;
 
@@ -478,15 +495,15 @@ namespace SJ
             return true;
         }
         public bool WriteNumber(float number, string format = "R") =>
-            WriteLiteral(number.ToString(format, CultureInfo.InvariantCulture));
+            WriteLiteralValue(number.ToString(format, CultureInfo.InvariantCulture));
         public bool WriteNumber(double number, string format = "R") =>
-            WriteLiteral(number.ToString(format, CultureInfo.InvariantCulture));
+            WriteLiteralValue(number.ToString(format, CultureInfo.InvariantCulture));
         public bool WriteLong(long number, string format = "G") =>
-            WriteLiteral(number.ToString(format, CultureInfo.InvariantCulture));
+            WriteLiteralValue(number.ToString(format, CultureInfo.InvariantCulture));
         public bool WriteULong(ulong number, string format = "G") =>
-            WriteLiteral(number.ToString(format, CultureInfo.InvariantCulture));
+            WriteLiteralValue(number.ToString(format, CultureInfo.InvariantCulture));
         public bool WriteString(
-            string value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None
+            ReadOnlySpan<char> value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None
         )
         {
             // This one does some things different enough that it can't be "WriteLiteral"
@@ -503,11 +520,13 @@ namespace SJ
 
             PrepareValue();
 
-            string escaped = SJEscape.Escape(value, options);
             Append('"');
-            Append(escaped);
+            count++;
+
+            WriteEscaped(value, options);
+
             Append('"');
-            count += escaped.Length + 2;
+            count++;
 
             if (Depth <= 0)
             {
@@ -520,8 +539,8 @@ namespace SJ
 
             return true;
         }
-        public bool WriteBool(bool value) => WriteLiteral(value ? "true" : "false");
-        public bool WriteNull() => WriteLiteral("null");
+        public bool WriteBool(bool value) => WriteLiteralValue(value ? "true" : "false");
+        public bool WriteNull() => WriteLiteralValue("null");
 
         // These are like "extensions"
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -533,6 +552,7 @@ namespace SJ
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Write(ulong number, string format = "G") => WriteULong(number, format);
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Write(ReadOnlySpan<char> value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None) => WriteString(value, options);
         public bool Write(string value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None)
         {
             // For the case of "Write" without any "info", the string overload is called for `null`
@@ -549,7 +569,7 @@ namespace SJ
         public bool Write(bool value) => WriteBool(value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool WriteKV(string key, float number, string format = "R")
+        public bool WriteKV(ReadOnlySpan<char> key, float number, string format = "R")
         {
             if (!WriteKey(key))
             {
@@ -558,7 +578,7 @@ namespace SJ
             return WriteNumber(number, format);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool WriteKV(string key, double number, string format = "R")
+        public bool WriteKV(ReadOnlySpan<char> key, double number, string format = "R")
         {
             if (!WriteKey(key))
             {
@@ -567,7 +587,7 @@ namespace SJ
             return WriteNumber(number, format);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool WriteKV(string key, long number, string format = "G")
+        public bool WriteKV(ReadOnlySpan<char> key, long number, string format = "G")
         {
             if (!WriteKey(key))
             {
@@ -576,7 +596,7 @@ namespace SJ
             return WriteLong(number, format);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool WriteKV(string key, ulong number, string format = "G")
+        public bool WriteKV(ReadOnlySpan<char> key, ulong number, string format = "G")
         {
             if (!WriteKey(key))
             {
@@ -585,7 +605,17 @@ namespace SJ
             return WriteULong(number, format);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool WriteKV(string key, string value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None)
+        public bool WriteKV(ReadOnlySpan<char> key, ReadOnlySpan<char> value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None)
+        {
+            if (!WriteKey(key))
+            {
+                return false;
+            }
+
+            return WriteString(value, options);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool WriteKV(ReadOnlySpan<char> key, string value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None)
         {
             if (!WriteKey(key))
             {
@@ -600,7 +630,7 @@ namespace SJ
             return WriteString(value, options);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool WriteKV(string key, bool value)
+        public bool WriteKV(ReadOnlySpan<char> key, bool value)
         {
             if (!WriteKey(key))
             {
@@ -610,7 +640,7 @@ namespace SJ
         }
 
         public IDisposable Array() => new ArrayScope(this);
-        public IDisposable ArrayKV(string key)
+        public IDisposable ArrayKV(ReadOnlySpan<char> key)
         {
             if (!WriteKey(key))
             {
@@ -622,7 +652,7 @@ namespace SJ
         }
 
         public IDisposable Object() => new ObjectScope(this);
-        public IDisposable ObjectKV(string key)
+        public IDisposable ObjectKV(ReadOnlySpan<char> key)
         {
             if (!WriteKey(key))
             {

@@ -111,30 +111,40 @@ public sealed class WriterUnitTests
 
         return success;
     }
+    static void WriteMustFail(SJWriter writer)
+    {
+        Assert.That.IsNullOrEmpty(writer.Error, $"Writer error must be empty before checking a failing write. Error : {writer.Error}");
+        Assert.IsFalse(writer.Write("Real or fake? No no fake!"), "Writing should fail");
+    }
+
     [TestMethod]
     public void TestRootWrite()
     {
-        var writer = new SJStringBuilderWriter()
+        var writer = new SJStringWriter()
         {
             indentSize = 4,
-            ThrowOnError = true
+            ThrowOnError = false
         };
 
         // Root level writes
         writer.Write(true);
         Assert.AreEqual("true", writer.ToString());
+        WriteMustFail(writer);
         writer.Reset();
 
         writer.Write(false);
         Assert.AreEqual("false", writer.ToString());
+        WriteMustFail(writer);
         writer.Reset();
 
         writer.WriteNull();
         Assert.AreEqual("null", writer.ToString());
+        WriteMustFail(writer);
         writer.Reset();
 
         writer.Write(null);
         Assert.AreEqual("null", writer.ToString());
+        WriteMustFail(writer);
         writer.Reset();
 
         const string IntFmt = "G";
@@ -144,16 +154,19 @@ public sealed class WriterUnitTests
         const int IntVal = 676767;
         writer.Write(IntVal, IntFmt);
         Assert.AreEqual(IntVal.ToString(IntFmt), writer.ToString());
+        WriteMustFail(writer);
         writer.Reset();
 
         const long LongVal = 1234123412341234123L;
         writer.Write(LongVal, IntFmt);
         Assert.AreEqual(LongVal.ToString(IntFmt, numberCulture), writer.ToString());
+        WriteMustFail(writer);
         writer.Reset();
 
         const ulong ULongVal = 12341234123412341234UL;
         writer.Write(ULongVal, IntFmt);
         Assert.AreEqual(ULongVal.ToString(IntFmt, numberCulture), writer.ToString());
+        WriteMustFail(writer);
         writer.Reset();
 
         // Floating point numbers are somewhat indeterminate, so use the same format and hope for the best.
@@ -161,12 +174,14 @@ public sealed class WriterUnitTests
         //        So the ToString behaviour should be same.
         const float FloatVal = 1.234f;
         writer.Write(FloatVal, FloatFmt);
-        Assert.AreEqual(((double)FloatVal).ToString(FloatFmt, numberCulture), writer.ToString());
+        Assert.AreEqual(FloatVal.ToString(FloatFmt, numberCulture), writer.ToString());
+        WriteMustFail(writer);
         writer.Reset();
 
         const double DoubleVal = 0.1d + 0.2d;
         writer.Write(DoubleVal, FloatFmt);
         Assert.AreEqual(DoubleVal.ToString(FloatFmt, numberCulture), writer.ToString());
+        WriteMustFail(writer);
         writer.Reset();
 
         // Generally, the test content isn't escaped (it's written as is)
@@ -174,13 +189,14 @@ public sealed class WriterUnitTests
         const string TestContent = "Quote: \", Backslash: \\, Tab: \t, Newline: \n, Pizza: \uD83C\uDF55, The 🅱 variant: \uD83C\uDD71\uFE0F";
         writer.Write(TestContent);
         Assert.AreEqual($"\"{SJEscape.Escape(TestContent)}\"", writer.ToString());
+        WriteMustFail(writer);
         writer.Reset();
     }
     [TestMethod]
     public void TestWrite()
     {
         // Generic object write / read
-        var writer = new SJStringBuilderWriter()
+        var writer = new SJStringWriter()
         {
             indentSize = 4,
             ThrowOnError = true
@@ -224,7 +240,7 @@ public sealed class WriterUnitTests
     [ExpectedException(typeof(SJWriter.WriteException))]
     public void TestDepth()
     {
-        var writer = new SJStringBuilderWriter()
+        var writer = new SJStringWriter()
         {
             indentSize = 4,
             ThrowOnError = true
@@ -236,7 +252,7 @@ public sealed class WriterUnitTests
     [TestMethod]
     public void TestDepthNoExcept()
     {
-        var writer = new SJStringBuilderWriter()
+        var writer = new SJStringWriter()
         {
             indentSize = 4,
             ThrowOnError = false
@@ -262,7 +278,7 @@ public sealed class WriterUnitTests
     [ExpectedException(typeof(SJWriter.WriteException))]
     public void TestStack()
     {
-        var writer = new SJStringBuilderWriter()
+        var writer = new SJStringWriter()
         {
             indentSize = 4,
             ThrowOnError = true
@@ -274,7 +290,7 @@ public sealed class WriterUnitTests
     [TestMethod]
     public void TestStackNoExcept()
     {
-        var writer = new SJStringBuilderWriter()
+        var writer = new SJStringWriter()
         {
             indentSize = 4,
             ThrowOnError = false
@@ -282,5 +298,59 @@ public sealed class WriterUnitTests
 
         Assert.IsTrue(TestStackWith(writer), "Stack test must fail");
         Assert.That.IsNotNullOrEmpty(writer.Error, "Writer should have an error set after failing");
+    }
+
+    [TestMethod]
+    public void TestNegativeWrite()
+    {
+        // The codepaths are generally the same so I will only test WriteLiteralValue and WriteKey instead
+        var writer = new SJStringWriter()
+        {
+            ThrowOnError = false
+        };
+
+        using (writer.Object())
+        {
+            // Mess up the KV order
+            writer.Write(3.141592);
+            Assert.That.IsNotNullOrEmpty(writer.Error);
+
+            writer.Reset(); // Resetting within an object scope that is successful will call "EndObject" and fail the object.
+            writer.BeginObject(); // So start an object to not cause that
+            // ?? : Perhaps each scope can hold "version" (which changes with every write)
+            //      of the writer to avoid this footgun? (the versions are checked in the writer as well?)
+            //      To avoid this, I need to store the version on the scope and the stack and then match the versions (or whether if the version is present on the stack at all. Which is more code so meh).
+
+            // ↓ This one will completely fail, unlike the object that has partially succeeded.
+            using (writer.Array()) { }
+            Assert.That.IsNotNullOrEmpty(writer.Error);
+
+            // And it will error out with EndObject. Not that it matters
+            writer.Reset();
+            writer.BeginObject();
+
+            // Test WriteKey twice
+            writer.WriteKey("aaa");
+            writer.WriteKey("bbb");
+            Assert.That.IsNotNullOrEmpty(writer.Error);
+            writer.BeginObject();
+            Assert.That.IsNotNullOrEmpty(writer.Error);
+
+            // Test WriteKey on array
+            writer.Reset();
+            writer.BeginObject();
+            writer.WriteKey("array");
+            using (writer.Array())
+            {
+                writer.WriteKey("keys on my array? it's more likely than you think");
+                Assert.That.IsNotNullOrEmpty(writer.Error);
+            }
+
+            writer.Reset();
+        }
+
+        Console.WriteLine($"Error present : {writer.Error}");
+        writer.Reset();
+        Assert.That.IsNullOrEmpty(writer.Error);
     }
 }

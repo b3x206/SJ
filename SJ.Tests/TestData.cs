@@ -47,7 +47,25 @@ public static class TestData
         ""cardNumber"": 1234123412341234,
         ""hondaCivic"": 676,
         ""expiry"": ""6/7"",
-        ""valid"": false
+        ""valid"": false,
+        ""transactions"": [{{ ""date"": 453461254869, ""id"": ""jorjor well"" }}, {{ ""date"": 0, ""id"": null }}]
+    }},
+    ""stats"": {{
+        ""score"": 99999999999,
+        ""moneysWasted"": ""9000.24 USD"",
+        ""lifetime"": 12000,
+        ""skill"": 21498124
+    }},
+    ""badAtThisGame"": true
+}}";
+    // Discarded values are validated and parsed actually, they are just "skipped until the next adjacent value"
+    public const string JsonDataDiscardInvalid = $@"{{
+    ""userName"": ""gamer"",
+    ""password"": ""password"",
+    ""{JsonDataDiscardKey}"": {{
+        ""cardNumber"": 1234123412341234,
+        ""hondaCivic"": 676,
+        ""transactions"": [{{ 67984gjkdsngjkfhn ewrg,,jkhgku.jshf.h ""addawdws"" ,,:: // }}]
     }},
     ""stats"": {{
         ""score"": 99999999999,
@@ -79,12 +97,12 @@ public static class TestData
 
     // - File Data
     public static readonly string BaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-    public static readonly string JsonFileValidName = Path.Combine(BaseDirectory, "Files", "valid.json"),
-        JsonFileLargeName = Path.Combine(BaseDirectory, "Files", "5mb.json"),
-        JsonFileLargeMinName = Path.Combine(BaseDirectory, "Files", "5mb.min.json"),
-        JsonFileInvalidUnterminated = Path.Combine(BaseDirectory, "Files", "unterminated.json"),
-        JsonFileInvalidNoColon = Path.Combine(BaseDirectory, "Files", "missing_colon.json"),
-        JsonFileInvalidBinary = Path.Combine(BaseDirectory, "Files", "binary.json");
+    public static readonly string JsonFileValidName = Path.Combine(BaseDirectory, "TestFiles", "valid.json"),
+        JsonFileLargeName = Path.Combine(BaseDirectory, "TestFiles", "5mb.json"),
+        JsonFileLargeMinName = Path.Combine(BaseDirectory, "TestFiles", "5mb.min.json"),
+        JsonFileInvalidUnterminated = Path.Combine(BaseDirectory, "TestFiles", "unterminated.json"),
+        JsonFileInvalidNoColon = Path.Combine(BaseDirectory, "TestFiles", "missing_colon.json"),
+        JsonFileInvalidBinary = Path.Combine(BaseDirectory, "TestFiles", "binary.json");
 
     // Escape Data
     public const string EscapeContent = "Quote: \", Backslash: \\, Tab: \t, Newline: \n, Pizza: \uD83C\uDF55, The 🅱 variant: \uD83C\uDD71\uFE0F";
