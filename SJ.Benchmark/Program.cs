@@ -1,7 +1,5 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
-using System.Diagnostics.Metrics;
-using System.Drawing;
 
 namespace SJ.Benchmark
 {
@@ -103,9 +101,11 @@ namespace SJ.Benchmark
         [Benchmark]
         public long ReadLarge() => BenchRead(largeText, NReadLarge);
 
-        static readonly Random rand = new();
+        [ThreadStatic]
+        static Random? rand;
         static void RandomString(ref Span<char> result)
         {
+            rand ??= new Random();
             const string Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012345678901";
             for (int i = 0; i < result.Length; i++)
             {
@@ -114,46 +114,30 @@ namespace SJ.Benchmark
         }
         static SJWriter BenchWrite(SJWriter writer, int elemCount)
         {
+            writer.Reset();
             Span<char> key = stackalloc char[16];
-            int v = 0;
+
             for (int i = 0; i < NWrite; i++)
             {
                 using (writer.Object())
                 {
-                    int ac = 0;
                     for (int j = 0; j < elemCount; j++)
                     {
-                        if (ac <= 0)
+                        RandomString(ref key);
+                        writer.WriteKV(key, Values[j % Values.Length]);
+
+                        // when will i learn.. it's cleaner to start a "sub loop" rather than to defer behaviour
+                        // while there isn't any clean "defer" built into the language.
+                        if (j > 0 && (j % WriteIntoArrayEveryN) == 0)
                         {
-                            RandomString(ref key);
-                            writer.WriteKV(key, Values[v]);
-                        }
-                        else
-                        {
-                            writer.WriteString(Values[v]);
-                            ac--;
-                            // TODO : likely buggy logic.
-                            if (ac <= 0)
+                            for (int k = 0; k < WriteIntoArrayEveryN && (k + j) < elemCount; k++, j++)
                             {
-                                writer.EndArray();
+                                using (writer.Array())
+                                {
+                                    writer.WriteString(Values[j % Values.Length]);
+                                }
                             }
                         }
-                        v = (v + 1) % Values.Length;
-
-                        if (ac <= 0)
-                        {
-                            if (j > 0 && (j % WriteIntoArrayEveryN) == 0)
-                            {
-                                ac = WriteIntoArrayEveryN;
-                                writer.BeginArray();
-                            }
-                        }
-                    }
-
-                    if (ac > 0)
-                    {
-                        writer.EndArray();
-                        // ac = 0;
                     }
                 }
             }
@@ -164,7 +148,7 @@ namespace SJ.Benchmark
         [Benchmark]
         public SJWriter Write() => BenchWrite(new SJStringWriter(), NWriteElem);
         [Benchmark]
-        public SJWriter WriteLarge() => BenchWrite(new SJStringWriter(), NWriteElem);
+        public SJWriter WriteLarge() => BenchWrite(new SJStringWriter(), NWriteLargeElem);
     }
 
     sealed class Program

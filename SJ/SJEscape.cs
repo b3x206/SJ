@@ -75,10 +75,6 @@ namespace SJ
                 switch (cur)
                 {
                     case '"':
-                        appendAction(self, '\\');
-                        appendAction(self, cur);
-                        count += 2;
-                        continue;
                     case '\\':
                         appendAction(self, '\\');
                         appendAction(self, cur);
@@ -117,6 +113,7 @@ namespace SJ
                     To4DigitHex(cur, ref hex);
                     appendAction(self, '\\');
                     appendAction(self, 'u');
+                    count += 2;
                     for (int j = 0; j < hex.Length; j++)
                     {
                         appendAction(self, hex[j]);
@@ -140,6 +137,7 @@ namespace SJ
                     To4DigitHex(cur, ref hex);
                     appendAction(self, '\\');
                     appendAction(self, 'u');
+                    count += 2;
                     for (int j = 0; j < hex.Length; j++)
                     {
                         appendAction(self, hex[j]);
@@ -149,6 +147,7 @@ namespace SJ
                     To4DigitHex(next, ref hex);
                     appendAction(self, '\\');
                     appendAction(self, 'u');
+                    count += 2;
                     for (int j = 0; j < hex.Length; j++)
                     {
                         appendAction(self, hex[j]);
@@ -166,6 +165,7 @@ namespace SJ
                     To4DigitHex(cur, ref hex);
                     appendAction(self, '\\');
                     appendAction(self, 'u');
+                    count += 2;
                     for (int j = 0; j < hex.Length; j++)
                     {
                         appendAction(self, hex[j]);
@@ -210,7 +210,6 @@ namespace SJ
             for (int i = 0; i < content.Length; i++)
             {
                 char cur = content[i];
-
                 if (cur == '\\')
                 {
                     i++;
@@ -292,9 +291,11 @@ namespace SJ
                             continue;
                     }
                 }
-
-                appendAction(self, cur);
-                count++;
+                else
+                {
+                    appendAction(self, cur);
+                    count++;
+                }
             }
 
             return count;
