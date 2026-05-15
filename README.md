@@ -113,12 +113,14 @@ position = ReadVector3(reader, reader.Read());
 Console.WriteLine($"Saved Position : {writer}, Read Position : {position}");
 ```
 
-<!-- TODO : Work In Progress
-Benchmarks
+<!-- TODO : Work In Progress. I should do this at home where the device is 
+            plugged in always. Not that these benchmarks were done unplugged, but currently I am not plugged in:
+### Benchmarks
 * Read = Read a [small file (valid.json)](TestFiles/valid.json) 256 times
 * ReadLarge = Read a [large file (5mb.json)](TestFiles/5mb.json) 16 times
 * Write = Write a small file (`{ "random_key": "random_value", ... 32 times }`) 256 times
 * WriteLarge = Write a small file (`{ "random_key": "random_value", ... 256 times }`) 256 times
+
 ```
 BenchmarkDotNet v0.15.8, Linux Debian GNU/Linux 13 (trixie)
 13th Gen Intel Core i7-13620H 2.92GHz, 1 CPU, 16 logical and 8 physical cores
@@ -146,7 +148,7 @@ Outliers
 // * Diagnostic Output - MemoryDiagnoser *
 ```
 
-Reader provides a basic 434.157136 MB/s mean throughput. (while apps and visual studio is open)
+Reader provides a basic 434.157136 MB/s mean throughput. (TODO : while apps and visual studio is open. do this only on wsl)
 -->
 
 ---

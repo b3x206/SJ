@@ -12,13 +12,15 @@ public sealed class EscapeUnitTests
         var sbUnescaped = new StringBuilder(content.Length);
         foreach (var opts in Enum.GetValues<SJEscape.EscapeOptions>())
         {
+            sb.Clear(); sbUnescaped.Clear(); // Clear to avoid invalid length
+
             int escapeCount = SJEscape.Escape(sb, static (s, c) => s.Append(c), content, opts);
-            Assert.AreEqual(sb.Length, escapeCount);
+            Assert.AreEqual(sb.Length, escapeCount, $"Expected {sb.Length}, got {escapeCount} for:\n{sb}");
 
-            int unescapeCount = SJEscape.Unescape(sbUnescaped, static (s, c) => s.Append(c), content);
-            Assert.AreEqual(sbUnescaped.Length, unescapeCount);
-            Console.WriteLine($"unescaped : {sbUnescaped}, content: {content}, len(unescaped: {unescapeCount})");
+            int unescapeCount = SJEscape.Unescape(sbUnescaped, static (s, c) => s.Append(c), sb.ToString());
+            Assert.AreEqual(sbUnescaped.Length, unescapeCount, $"Expected {sbUnescaped.Length}, got {unescapeCount} for :\n{sbUnescaped}");
 
+            // content Escape -> content Unescape must equal itself
             Assert.AreEqual(content, sbUnescaped.ToString());
         }
     }
