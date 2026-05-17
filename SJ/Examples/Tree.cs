@@ -116,7 +116,7 @@ namespace SJ.Examples
             }
         }
 
-        public static string ToJSON(SJTree tree) => ToJSON(tree, new SJStringBuilderWriter()
+        public static string ToJSON(SJTree tree) => ToJSON(tree, new SJStringWriter()
         {
             ThrowOnError = true
         });
@@ -182,7 +182,7 @@ namespace SJ.Examples
 
         public override string ToString()
         {
-            return ToJSON(this, new SJStringBuilderWriter()
+            return ToJSON(this, new SJStringWriter()
             {
                 ThrowOnError = true,
                 indentSize = 4

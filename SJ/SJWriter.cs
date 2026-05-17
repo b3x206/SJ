@@ -12,6 +12,7 @@ namespace SJ
     /// <example>
     /// <![CDATA[
     /// using SJ;
+    /// using System;
     /// 
     /// // An example class would look like this:
     /// public sealed class SJExampleWriter : SJWriter
@@ -20,7 +21,7 @@ namespace SJ
     /// 
     ///     public SJExampleWriter(WriteSource data)
     ///     {
-    ///         this.data = data ?? throw new System.ArgumentNullException(nameof(data));
+    ///         this.data = data ?? throw new ArgumentNullException(nameof(data));
     ///     }
     /// 
     ///     public override void Append(char c) => data.Write(c);
@@ -64,7 +65,7 @@ namespace SJ
         /// <summary>
         /// A tracker for type information that can be stacked and indexed (i.e. recursive data)
         /// </summary>
-        public sealed class WriteStackInfo
+        public struct WriteStackInfo
         {
             /// <summary>
             /// Write type, this is generally either 
@@ -72,13 +73,19 @@ namespace SJ
             /// </summary>
             public SJType type;
             /// <summary>
-            /// Current write order index. This is non-zero if this is not the first value written.
+            /// Currently stored write index (used more like a "count").
             /// </summary>
-            public int index = 0;
+            public int index;
+            /// <summary>
+            /// Whether if this entry is valid or not.
+            /// </summary>
+            public readonly bool Valid => type != SJType.Error && type != SJType.End && index >= 0;
 
+            public static readonly WriteStackInfo Invalid = new WriteStackInfo(SJType.Error) { index = -1 };
             public WriteStackInfo(SJType type)
             {
                 this.type = type;
+                index = 0;
             }
             public static implicit operator WriteStackInfo(SJType type) => new WriteStackInfo(type);
         }
@@ -184,7 +191,21 @@ namespace SJ
             }
         }
         public Stack<WriteStackInfo> writeStack = new Stack<WriteStackInfo>();
-        public WriteStackInfo Top => writeStack.Count > 0 ? writeStack.Peek() : null;
+        public WriteStackInfo Top
+        {
+            get => writeStack.Count > 0 ? writeStack.Peek() : WriteStackInfo.Invalid;
+            set
+            {
+                if (!writeStack.TryPop(out _))
+                {
+                    Error = "Tried to set the top of the write stack while the stack depth is zero.";
+                    return;
+                }
+
+                writeStack.Push(value);
+            }
+        }
+
         public int Depth => writeStack.Count;
         // This state doesn't need to be put into the write stack
         // as from what I see on JSON.parse, keys must be string, so there is no recursion on those
@@ -256,7 +277,7 @@ namespace SJ
                 return;
             }
 
-            if (Top != null)
+            if (Top.Valid)
             {
                 if (!NeedValue)
                 {
@@ -277,7 +298,9 @@ namespace SJ
                 // keys shouldn't affect the write index as it's a pair
                 if (!NeedKey)
                 {
-                    Top.index++;
+                    var t = Top;
+                    t.index++;
+                    Top = t;
                 }
             }
         }
@@ -333,9 +356,9 @@ namespace SJ
                 Error = "Expected writing object value";
                 return false;
             }
-            if (Top == null || Top.type != SJType.Object)
+            if (!Top.Valid || Top.type != SJType.Object)
             {
-                Error = $"Invalid EndObject for toplevel with type '{Top?.type}', expected Object";
+                Error = $"Invalid EndObject for toplevel with type '{Top.type}', expected Object";
                 return false;
             }
 
@@ -398,9 +421,9 @@ namespace SJ
                 Error = "Expected writing object key";
                 return false;
             }
-            if (Top == null || Top.type != SJType.Array)
+            if (!Top.Valid || Top.type != SJType.Array)
             {
-                Error = $"Invalid EndObject for toplevel with type '{Top?.type}', expected Array";
+                Error = $"Invalid EndObject for toplevel with type '{Top.type}', expected Array";
                 return false;
             }
 

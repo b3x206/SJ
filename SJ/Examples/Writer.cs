@@ -6,7 +6,7 @@ namespace SJ.Examples
     {
         static void Main(string[] args)
         {
-            var writer = new SJStringBuilderWriter()
+            var writer = new SJStringWriter()
             {
                 // Enable pretty printing
                 indentSize = 4,

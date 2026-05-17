@@ -113,13 +113,13 @@ position = ReadVector3(reader, reader.Read());
 Console.WriteLine($"Saved Position : {writer}, Read Position : {position}");
 ```
 
-<!-- TODO : Work In Progress. I should do this at home where the device is 
-            plugged in always. Not that these benchmarks were done unplugged, but currently I am not plugged in:
 ### Benchmarks
 * Read = Read a [small file (valid.json)](TestFiles/valid.json) 256 times
 * ReadLarge = Read a [large file (5mb.json)](TestFiles/5mb.json) 16 times
-* Write = Write a small file (`{ "random_key": "random_value", ... 32 times }`) 256 times
-* WriteLarge = Write a small file (`{ "random_key": "random_value", ... 256 times }`) 256 times
+* Write = Write few kb of JSON (`{ "random_key": "random_value", ... 512 entries }`) 256 times
+* WriteLarge = Write ~500kb JSON (`{ "random_key": "random_value", ... 16384 entries }`) 16 times
+
+Classes used are [`SJStringReader`](./SJ/SJStringReader.cs) and [`SJStringWriter`](SJ/SJStringWriter.cs)
 
 ```
 BenchmarkDotNet v0.15.8, Linux Debian GNU/Linux 13 (trixie)
@@ -127,29 +127,21 @@ BenchmarkDotNet v0.15.8, Linux Debian GNU/Linux 13 (trixie)
 .NET SDK 8.0.421
   [Host]     : .NET 8.0.27 (8.0.27, 8.0.2726.22922), X64 RyuJIT x86-64-v3
   DefaultJob : .NET 8.0.27 (8.0.27, 8.0.2726.22922), X64 RyuJIT x86-64-v3
-
-
-| Method    | Mean      | Error    | StdDev   | Allocated |
-|---------- |----------:|---------:|---------:|----------:|
-| Read      |  33.35 ms | 0.385 ms | 0.360 ms |     136 B |
-| ReadLarge | 189.11 ms | 0.991 ms | 0.827 ms |     136 B |
-
-// * Hints *
-Outliers
-  SJBenchmark.ReadLarge: Default -> 2 outliers were removed (192.00 ms, 192.34 ms)
-
-// * Legends *
-  Mean      : Arithmetic mean of all measurements
-  Error     : Half of 99.9% confidence interval
-  StdDev    : Standard deviation of all measurements
-  Allocated : Allocated memory per single operation (managed only, inclusive, 1KB = 1024B)
-  1 ms      : 1 Millisecond (0.001 sec)
-
-// * Diagnostic Output - MemoryDiagnoser *
 ```
+| Method     | Mean         | Error      | StdDev     | Allocated |
+|----------- |-------------:|-----------:|-----------:|----------:|
+| Read       |  29841.4 μs |   475.8 μs |   445.0 μs |     136 B |
+| ReadLarge  | 181649.1 μs |  3476.7 μs |  4641.4 μs |     136 B |
+| Write      |  18381.9 μs |   115.7 μs |   102.5 μs |     152 B |
+| WriteLarge |  32507.3 μs |   245.2 μs |   217.4 μs |     152 B |
 
-Reader provides a basic 434.157136 MB/s mean throughput. (TODO : while apps and visual studio is open. do this only on wsl)
--->
+Reader (according to ReadLarge) provides a ~464 MB/s throughput.
+Writer (according to WriteLarge) provides a ~182 MB/s throughput.
+
+The allocations are caused by creating a [`Stack<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.stack-1?view=netstandard-2.1&devlangs=csharp) when the base SJ class is initialized. <br>
+**Note:** More allocations may occur depending on the size or strings you allocate while creating an object or while writing into a resizing buffer in memory.
+
+Note that these are tested in the best case scenario, real life applications and usage will cause differences in speed.
 
 ---
 
@@ -157,11 +149,3 @@ More examples are in the [`./SJ/Examples`](./SJ/Examples) directory. <br>
 These files are not included for compiling, you can copy and paste it normally.
 
 You can also use the [unit tests](./SJ.Tests) as examples too.
-
-## TODO
-* [ ] ?? : Create noexcept tests (but not that important - error has to be set to throw 
-  exception in normal cases. so maybe i will do it only for the Writer.)
-* [ ] Backport improvements to the tests on `full` back to `master` branch
-* [ ] Create `no-jsonc` based on that
-* [ ] Publish as nuget (?)
-* [ ] Make readme.md less threatening to look at (partially done)
