@@ -13,7 +13,6 @@ public sealed class ReaderUnitTests
             default:
             case SJType.Error:
                 {
-                    reader.Location(out int l, out int c);
                     reader.ThrowError();
                     break;
                 }
