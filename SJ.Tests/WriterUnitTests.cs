@@ -114,7 +114,7 @@ public sealed class WriterUnitTests
     static void WriteMustFail(SJWriter writer)
     {
         Assert.That.IsNullOrEmpty(writer.Error, $"Writer error must be empty before checking a failing write. Error : {writer.Error}");
-        Assert.IsFalse(writer.Write("Real or fake? No no fake!"), "Writing should fail");
+        Assert.IsFalse(writer.Write("Real or fake? No no fake!"), "Writing must fail");
     }
 
     // TODO : Allow supplying of a custom writer type
@@ -185,6 +185,13 @@ public sealed class WriterUnitTests
         WriteMustFail(writer);
         writer.Reset();
 
+        // Well I didn't know this was possible
+        const string DoubleFmt = "G999";
+        writer.Write(double.MaxValue, DoubleFmt);
+        Assert.AreEqual(double.MaxValue.ToString(DoubleFmt, numberCulture), writer.ToString());
+        WriteMustFail(writer);
+        writer.Reset();
+
         // Generally, the test content isn't escaped (it's written as is)
         // The escaping is "tested", so I will not test that.
         const string TestContent = "Quote: \", Backslash: \\, Tab: \t, Newline: \n, Pizza: \uD83C\uDF55, The 🅱 variant: \uD83C\uDD71\uFE0F";
@@ -218,6 +225,7 @@ public sealed class WriterUnitTests
         // Read resulting data
         string data = writer.ToString();
         // Validate
+        Assert.AreEqual(data.Length, writer.count);
         ReaderUnitTests.Read(data);
         // And show
         Console.WriteLine(data);

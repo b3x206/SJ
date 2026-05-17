@@ -1,12 +1,12 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
-using System.Text;
 
 namespace SJ.Benchmark
 {
     [MemoryDiagnoser]
     public class SJBenchmark
     {
+#pragma warning disable CA1822
         const int NRead = 256;
         const int NReadLarge = 16;
         static readonly string BaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -15,11 +15,9 @@ namespace SJ.Benchmark
         private string validText = string.Empty;
         private string largeText = string.Empty;
 
-        // Dumps all KV into an array. Should count into the main counter.
-        const int NWrite = 128;
-        const int NWriteElem = 32;
-        const int NWriteLargeElem = 256;
-        const int WriteIntoArrayEveryN = 8;
+        const int NWriteElem = 64;
+        const int NWriteLargeElem = 512;
+        const int WriteIntoArrayEveryN = 16; // 16 KV, 1 K 16 Array entries
 
         [GlobalSetup]
         public void Setup()
@@ -28,6 +26,7 @@ namespace SJ.Benchmark
             largeText = File.ReadAllText(JsonFileLargeName);
         }
 
+        // Read
         static void ReadRecursive(SJReader reader, ref long counter) => ReadRecursiveInternal(reader, reader.Read(), ref counter);
         static void ReadRecursiveInternal(SJReader reader, SJReader.Value value, ref long counter)
         {
@@ -80,6 +79,7 @@ namespace SJ.Benchmark
         [Benchmark]
         public long ReadLarge() => BenchRead(largeText, NReadLarge);
 
+        // Write
         [ThreadStatic]
         static Random? rand;
         static void RandomString(ref Span<char> result)
@@ -91,46 +91,41 @@ namespace SJ.Benchmark
                 result[i] = Chars[rand.Next(Chars.Length)];
             }
         }
-        static SJWriter BenchWrite(SJWriter writer, int elemCount)
+        static int BenchWrite(SJWriter writer, int elemCount)
         {
             writer.Reset();
             Span<char> key = stackalloc char[8];
-            Span<char> value = stackalloc char[8];
+            Span<char> value = stackalloc char[16];
 
-            for (int i = 0; i < NWrite; i++)
+            using (writer.Object())
             {
-                using (writer.Object())
+                for (int j = 0; j < elemCount; j++)
                 {
-                    for (int j = 0; j < elemCount; j++)
-                    {
-                        RandomString(ref key);
-                        RandomString(ref value);
-                        writer.WriteKV(key, value);
+                    RandomString(ref key);
+                    RandomString(ref value);
+                    writer.WriteKV(key, value);
 
-                        // when will i learn.. it's cleaner to start a "sub loop" rather than to defer behaviour
-                        // while there isn't any clean "defer" built into the language.
-                        if (j > 0 && (j % WriteIntoArrayEveryN) == 0)
+                    // when will i learn.. it's cleaner to start a "sub loop" rather than to defer behaviour
+                    // while there isn't any clean "defer" built into the language.
+                    if (j > 0 && (j % WriteIntoArrayEveryN) == 0)
+                    {
+                        for (int k = 0; k < WriteIntoArrayEveryN && (k + j) < elemCount; k++, j++)
                         {
-                            for (int k = 0; k < WriteIntoArrayEveryN && (k + j) < elemCount; k++, j++)
+                            RandomString(ref key);
+                            using (writer.ArrayKV(key))
                             {
-                                using (writer.Array())
-                                {
-                                    RandomString(ref value);
-                                    writer.WriteString(value);
-                                }
+                                RandomString(ref value);
+                                writer.WriteString(value);
                             }
                         }
                     }
                 }
             }
 
-            // To not discard the processed value
-            Console.WriteLine($"Writer count : {writer.count}, elemCount : {elemCount}");
-            return writer;
+            return writer.count;
         }
-#pragma warning disable CA1822
         [Benchmark]
-        public SJWriter WriteBasic()
+        public int WriteBasic()
         {
             // {"1":1,...}
             var writer = new SJStringWriter((NWriteElem * 5) + 8);
@@ -146,20 +141,20 @@ namespace SJ.Benchmark
                 }
             }
 
-            return writer;
+            return writer.count;
         }
         [Benchmark]
-        public SJWriter Write() => BenchWrite(new SJStringWriter(), NWriteElem);
+        public int Write() => BenchWrite(new SJStringWriter(), NWriteElem);
         [Benchmark]
-        public SJWriter WriteLarge() => BenchWrite(new SJStringWriter(), NWriteLargeElem);
+        public int WriteLarge() => BenchWrite(new SJStringWriter(), NWriteLargeElem);
 #pragma warning restore CA1822
     }
 
     sealed class Program
     {
-        public static void Main(string[] args)
+        static void Main()
         {
-            var summary = BenchmarkRunner.Run<SJBenchmark>();
+            _ = BenchmarkRunner.Run<SJBenchmark>();
         }
     }
 }

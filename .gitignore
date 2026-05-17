@@ -65,3 +65,4 @@ nunit-*.xml
 # Exclude explicitly
 SJ/DocTesting.cs
 SJ.Tests/DocTesting.cs
+SJ.Sandbox/*

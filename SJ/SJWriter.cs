@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Buffers;
 
 namespace SJ
 {
@@ -45,6 +46,9 @@ namespace SJ
         // I could create a "SJSpanWriter" that does "the same behaviour",
         // but it's repeated code. So let's be "heap only" for the time being.
 
+        // Unity does not support System.Range
+#pragma warning disable IDE0057
+
         /// <summary>
         /// Exception thrown on an error case while reading JSON.
         /// </summary>
@@ -79,7 +83,7 @@ namespace SJ
             public static implicit operator WriteStackInfo(SJType type) => new WriteStackInfo(type);
         }
 
-        private readonly struct ObjectScope : IDisposable
+        public readonly struct ObjectScope : IDisposable
         {
             private readonly SJWriter writer;
             private readonly bool success;
@@ -98,7 +102,7 @@ namespace SJ
                 }
             }
         }
-        private readonly struct ArrayScope : IDisposable
+        public readonly struct ArrayScope : IDisposable
         {
             private readonly SJWriter writer;
             private readonly bool success;
@@ -224,7 +228,7 @@ namespace SJ
         }
 
         // The base writers
-        private static void SJSelfAppend(SJWriter writer, char c) => writer.Append(c);
+        private static readonly Action<SJWriter, char> selfAppend = (SJWriter writer, char c) => writer.Append(c);
         protected void WriteIndent(int depth)
         {
             if (depth <= 0 || indentSize <= 0)
@@ -242,7 +246,7 @@ namespace SJ
         }
         protected void WriteEscaped(ReadOnlySpan<char> data, SJEscape.EscapeOptions options)
         {
-            count += SJEscape.Escape(this, SJSelfAppend, data, options);
+            count += SJEscape.Escape(this, selfAppend, data, options);
         }
         protected void PrepareValue()
         {
@@ -494,14 +498,84 @@ namespace SJ
 
             return true;
         }
-        public bool WriteNumber(float number, string format = "R") =>
-            WriteLiteralValue(number.ToString(format, CultureInfo.InvariantCulture));
-        public bool WriteNumber(double number, string format = "R") =>
-            WriteLiteralValue(number.ToString(format, CultureInfo.InvariantCulture));
-        public bool WriteLong(long number, string format = "G") =>
-            WriteLiteralValue(number.ToString(format, CultureInfo.InvariantCulture));
-        public bool WriteULong(ulong number, string format = "G") =>
-            WriteLiteralValue(number.ToString(format, CultureInfo.InvariantCulture));
+        public bool WriteNumber(float number, string format = "R")
+        {
+            // number.ToString("G999") is totally reasonable and possible. So for floats, this is done.
+            // Integers get a fixed size buffer.
+            int capacity = 32, written = 0;
+            Span<char> data = stackalloc char[capacity];
+            char[] rented = null;
+
+            try
+            {
+                while (!number.TryFormat(data, out written, format, CultureInfo.InvariantCulture))
+                {
+                    if (!(rented is null)) ArrayPool<char>.Shared.Return(rented);
+
+                    capacity *= 2;
+                    data = rented = ArrayPool<char>.Shared.Rent(capacity);
+                }
+
+                return WriteLiteralValue(data.Slice(0, written));
+            }
+            finally
+            {
+                if (!(rented is null))
+                {
+                    ArrayPool<char>.Shared.Return(rented);
+                }
+            }
+        }
+        public bool WriteNumber(double number, string format = "R")
+        {
+            int capacity = 32, written = 0;
+            Span<char> data = stackalloc char[capacity];
+            char[] rented = null;
+
+            try
+            {
+                while (!number.TryFormat(data, out written, format, CultureInfo.InvariantCulture))
+                {
+                    if (!(rented is null)) ArrayPool<char>.Shared.Return(rented);
+
+                    capacity *= 2;
+                    data = rented = ArrayPool<char>.Shared.Rent(capacity);
+                }
+
+                return WriteLiteralValue(data.Slice(0, written));
+            }
+            finally
+            {
+                if (!(rented is null))
+                {
+                    ArrayPool<char>.Shared.Return(rented);
+                }
+            }
+        }
+        public bool WriteLong(long number, string format = "G")
+        {
+            Span<char> data = stackalloc char[32]; // long.MinValue.ToString().Length == 20
+
+            if (!number.TryFormat(data, out int written, format, CultureInfo.InvariantCulture))
+            {
+                Error = $"Failed to convert number to string {number} with format {format}";
+                return false;
+            }
+
+            return WriteLiteralValue(data.Slice(0, written));
+        }
+        public bool WriteULong(ulong number, string format = "G")
+        {
+            Span<char> data = stackalloc char[32]; // ulong.MaxValue.ToString().Length == 20
+
+            if (!number.TryFormat(data, out int written, format, CultureInfo.InvariantCulture))
+            {
+                Error = $"Failed to convert number to string {number} with format {format}";
+                return false;
+            }
+
+            return WriteLiteralValue(data.Slice(0, written));
+        }
         public bool WriteString(
             ReadOnlySpan<char> value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None
         )
@@ -639,8 +713,8 @@ namespace SJ
             return WriteBool(value);
         }
 
-        public IDisposable Array() => new ArrayScope(this);
-        public IDisposable ArrayKV(ReadOnlySpan<char> key)
+        public ArrayScope Array() => new ArrayScope(this);
+        public ArrayScope ArrayKV(ReadOnlySpan<char> key)
         {
             if (!WriteKey(key))
             {
@@ -651,8 +725,8 @@ namespace SJ
             return new ArrayScope(this);
         }
 
-        public IDisposable Object() => new ObjectScope(this);
-        public IDisposable ObjectKV(ReadOnlySpan<char> key)
+        public ObjectScope Object() => new ObjectScope(this);
+        public ObjectScope ObjectKV(ReadOnlySpan<char> key)
         {
             if (!WriteKey(key))
             {
@@ -671,5 +745,6 @@ namespace SJ
             Error = null;
             writeStack.Clear();
         }
+#pragma warning restore IDE0057
     }
 }

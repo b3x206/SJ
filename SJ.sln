@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SJ", "SJ\SJ.csproj", "{2E4E
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SJ.Tests", "SJ.Tests\SJ.Tests.csproj", "{F778193B-A617-4A1F-9F4A-366867CAEB79}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SJ.Benchmark", "SJ.Benchmark\SJ.Benchmark.csproj", "{B9AE6F0C-8AAE-45A7-BE81-CF0DD9D9F3FE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SJ.Benchmark", "SJ.Benchmark\SJ.Benchmark.csproj", "{B9AE6F0C-8AAE-45A7-BE81-CF0DD9D9F3FE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TestFiles", "TestFiles", "{4ED46B2C-E3F0-4F7F-BA9E-1793AB1E37AB}"
 	ProjectSection(SolutionItems) = preProject
@@ -37,6 +37,10 @@ Global
 		{B9AE6F0C-8AAE-45A7-BE81-CF0DD9D9F3FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B9AE6F0C-8AAE-45A7-BE81-CF0DD9D9F3FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B9AE6F0C-8AAE-45A7-BE81-CF0DD9D9F3FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A07B4CF-C233-4915-BBDE-2EEEAF0C197B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A07B4CF-C233-4915-BBDE-2EEEAF0C197B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A07B4CF-C233-4915-BBDE-2EEEAF0C197B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A07B4CF-C233-4915-BBDE-2EEEAF0C197B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
