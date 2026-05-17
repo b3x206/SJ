@@ -28,6 +28,7 @@ namespace SJ
     /// <example>
     /// <![CDATA[
     /// using SJ;
+    /// using System;
     /// 
     /// // An example class would look like this:
     /// // (In fact, this is just SJStringReader)
@@ -65,7 +66,6 @@ namespace SJ
     ///     // Because each value slice is evaluated lazily, the data ranges must persist and should be representable easily as a range (making arbitrary Streams much harder)
     ///     // Note that there isn't much of a reason to do this, if you read the data as soon as it's received from the SJReader.
     ///     protected override ReadOnlySpan<char> Slice(int start, int length) => string.IsNullOrEmpty(_Data) ? ReadOnlySpan<char>.Empty : _Data.AsSpan(start, length);
-    /// 
     /// }
     /// ]]>
     /// </example>

@@ -13,6 +13,9 @@ public sealed class WriterUnitTests
             throw new ArgumentException("Can't write test values to top level object.", nameof(writer));
         }
 
+        int startingIndex = writer.Top.index;
+        void CheckWriterIndex() => Assert.AreEqual(++startingIndex, writer.Top.index, "Expected write to increase top level element counter index");
+
         // golang core :
         bool success = string.IsNullOrEmpty(writer.Error);
         switch (writer.Top.type)
@@ -26,31 +29,44 @@ public sealed class WriterUnitTests
                         success = success && writer.WriteNull();
                     }
 
+                    // "Index" count is tracked only on the top level recursive structures
                     success = success && writer.WriteKey("yes");
                     success = success && writer.Write(true);
+                    CheckWriterIndex();
 
                     success = success && writer.WriteKey("no");
                     success = success && writer.Write(false);
+                    CheckWriterIndex();
 
                     success = success && writer.WriteKey("maybe");
                     success = success && writer.WriteNull();
+                    CheckWriterIndex();
 
                     success = success && writer.WriteKey("strings");
                     success = success && writer.Write("Did you know : Every minute in here 60 seconds pass. But when I'm programming every key press makes minute pass in twice the speed!");
+                    CheckWriterIndex();
 
                     success = success && writer.WriteKey("integer number");
                     success = success && writer.Write(12345 + 67740);
+                    CheckWriterIndex();
 
                     success = success && writer.WriteKey("float number");
                     success = success && writer.Write(Math.Sin(Math.PI * 0.245) * 100);
+                    CheckWriterIndex();
 
                     // Use WriteKV
                     success = success && writer.WriteKV("yes 2", true);
+                    CheckWriterIndex();
                     success = success && writer.WriteKV("no 2", false);
+                    CheckWriterIndex();
                     success = success && writer.WriteKV("maybe 2", null);
+                    CheckWriterIndex();
                     success = success && writer.WriteKV("strings 2", "bla bla bla");
+                    CheckWriterIndex();
                     success = success && writer.WriteKV("calc short for calc", 50 + 3 - 7 + 12 - 5 + 24 - 12 + 53 + -12 - 40 + 1);
+                    CheckWriterIndex();
                     success = success && writer.WriteKV("some number", Math.ScaleB(2.5, 4));
+                    CheckWriterIndex();
 
                     success = success && writer.WriteKey("array");
                     if (success)
@@ -82,11 +98,17 @@ public sealed class WriterUnitTests
                     }
 
                     success = success && writer.Write(true);
+                    CheckWriterIndex();
                     success = success && writer.Write(false);
+                    CheckWriterIndex();
                     success = success && writer.WriteNull();
+                    CheckWriterIndex();
                     success = success && writer.Write("Did you know : Every minute in here, 60 seconds pass.");
+                    CheckWriterIndex();
                     success = success && writer.Write(12345 + 67740);
+                    CheckWriterIndex();
                     success = success && writer.Write(Math.Sin(Math.PI * 0.245) * 100);
+                    CheckWriterIndex();
 
                     if (success)
                         using (writer.Array())
@@ -116,17 +138,22 @@ public sealed class WriterUnitTests
         Assert.That.IsNullOrEmpty(writer.Error, $"Writer error must be empty before checking a failing write. Error : {writer.Error}");
         Assert.IsFalse(writer.Write("Real or fake? No no fake!"), "Writing must fail");
     }
-
-    // TODO : Allow supplying of a custom writer type
-    [TestMethod]
-    public void TestRootWrite()
+    static bool TestDepthWith(SJWriter writer)
     {
-        var writer = new SJStringWriter()
-        {
-            indentSize = 4,
-            ThrowOnError = false
-        };
+        writer.maxDepth = Math.Max(writer.maxDepth, 128);
 
+        for (int i = 0; i < writer.maxDepth + 1; i++)
+        {
+            if (!writer.BeginObject())
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    static void TestRootWith(SJWriter writer)
+    {
         // Root level writes
         writer.Write(true);
         Assert.AreEqual("true", writer.ToString());
@@ -200,6 +227,19 @@ public sealed class WriterUnitTests
         WriteMustFail(writer);
         writer.Reset();
     }
+
+    // TODO : Allow supplying of a custom writer type
+    [TestMethod]
+    public void TestRootWrite()
+    {
+        var writer = new SJStringWriter()
+        {
+            indentSize = 4,
+            ThrowOnError = false
+        };
+
+        TestRootWith(writer);
+    }
     [TestMethod]
     public void TestWrite()
     {
@@ -231,20 +271,7 @@ public sealed class WriterUnitTests
         Console.WriteLine(data);
     }
 
-    static bool TestDepthWith(SJWriter writer)
-    {
-        writer.maxDepth = Math.Max(writer.maxDepth, 128);
 
-        for (int i = 0; i < writer.maxDepth + 1; i++)
-        {
-            if (!writer.BeginObject())
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
     [TestMethod]
     [ExpectedException(typeof(SJWriter.WriteException))]
     public void TestDepth()

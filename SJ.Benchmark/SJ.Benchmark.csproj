@@ -19,7 +19,7 @@
     <Content Include="..\TestFiles\**">
       <Link>TestFiles\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	</Content>
+    </Content>
   </ItemGroup>
 
 </Project>
