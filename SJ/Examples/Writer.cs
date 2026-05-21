@@ -2,7 +2,7 @@
 
 namespace SJ.Examples
 {
-    sealed class Writer
+    internal sealed class Writer
     {
         static void Main(string[] args)
         {
