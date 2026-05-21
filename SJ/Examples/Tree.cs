@@ -6,7 +6,7 @@ using System.Text;
 namespace SJ.Examples
 {
     // A basic tree structure.
-    sealed class SJTree
+    internal sealed class SJTree
     {
         // Since the SJ value is lazily evaluated, we should copy the data here too.
         public SJType type;

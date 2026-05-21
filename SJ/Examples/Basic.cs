@@ -2,7 +2,7 @@
 
 namespace SJ.Examples
 {
-    sealed class Basic
+    internal sealed class Basic
     {
         static void Main(string[] args)
         {
