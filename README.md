@@ -17,6 +17,10 @@ Because of
 
 The parser implementation is not very simple like sj.h. "But I tried™"
 
+**3:**
+
+Development is mainly done in the [`devel`](https://github.com/b3x206/SJ/tree/devel) branch. The master branch receives the base code files. Maybe I put all files into one to make it "truly" single file, if convenient in the future..
+
 ## Examples
 
 ### Reader
@@ -134,7 +138,7 @@ BenchmarkDotNet v0.15.8, Linux Debian GNU/Linux 13 (trixie)
 Reader (according to ReadLarge) provides a ~464 MB/s throughput.
 Writer (according to WriteLarge) provides a ~182 MB/s throughput.
 
-The allocations are caused by creating a [`Stack<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.stack-1?view=netstandard-2.1&devlangs=csharp) when the base SJ class is initialized. <br>
+The allocations are caused by creating a [`Stack<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.stack-1?view=netstandard-2.1&devlangs=csharp) and the "typed" `static readonly` delegate creation (one time only during program lifetime) when the base SJ class is initialized. <br>
 **Note:** More allocations may occur depending on the size or strings you allocate while creating an object or while writing into a resizing buffer in memory.
 
 Note that these are tested in the best case scenario, real life applications and usage will cause differences in speed.
@@ -145,3 +149,4 @@ More examples are in the [`./Examples`](./Examples) directory. <br>
 These files are not included for compiling in the .csproj, you can copy and paste it normally.
 
 However, if these are not suitable for your usage, you can simply delete the files.
+

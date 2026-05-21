@@ -3,7 +3,7 @@ using System.Text;
 
 namespace SJ.Examples
 {
-    sealed class Printer
+    internal sealed class Printer
     {
         static void ReadInner(StringBuilder sb, SJReader reader, SJReader.Value root)
         {
