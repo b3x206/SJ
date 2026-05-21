@@ -2,7 +2,7 @@
 
 This is a port of https://github.com/rxi/sj.h/blob/master/sj.h with some "fixes" to improve correctness, alongside some added "epic oop inheritance design pattern" to allow reading from data implemented through by extending [`SJReader`](./SJ/SJReader.cs).
 
-This branch (`full`) also adds a [`SJWriter`](./SJ/SJWriter.cs) to allow writing JSON with rule enforcement, alongside auto formatting if needed.
+This branch (`devel`) is where development is done, before getting packed into "two files". Development of the repository is done by using `git worktree` on seperate directories.
 
 ## Notes
 
@@ -17,9 +17,7 @@ Because of
 * Improving "correctness"
 * And adding comment support.
 
-The parser implementation is not very simple like sj.h. If you want to have a simpler JSON reader, 
-you can check the `no-jsonc` branch (WIP) for the version without comment support
-<sup>(even simpler version, but it will still have the correctness improvements)</sup>.
+The code is more complicated. But I have taken the decision to make it simpler on `master`. Pushing here won't update `master` branch (yet), but I will do that sometime, where source is generated on push to `devel`..
 
 ## Examples
 
@@ -139,7 +137,7 @@ Reader (according to ReadLarge) provides a ~464 MB/s throughput.
 Writer (according to WriteLarge) provides a ~182 MB/s throughput.
 
 The allocations are caused by creating a [`Stack<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.stack-1?view=netstandard-2.1&devlangs=csharp) when the base SJ class is initialized. <br>
-**Note:** More allocations may occur depending on the size or strings you allocate while creating an object or while writing into a resizing buffer in memory.
+**Note:** More allocations may occur depending on the size or strings you allocate while creating an object or while writing into a resizing buffer in memory. Also the `static readonly` initializations for some lambdas..
 
 Note that these are tested in the best case scenario, real life applications and usage will cause differences in speed.
 
@@ -149,3 +147,4 @@ More examples are in the [`./SJ/Examples`](./SJ/Examples) directory. <br>
 These files are not included for compiling, you can copy and paste it normally.
 
 You can also use the [unit tests](./SJ.Tests) as examples too.
+
