@@ -64,6 +64,11 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
             Assert.AreEqual(v.type, SJType.String);
         }
     }
+    [TestMethod]
+    public void TestEmojiSpamLiteral()
+    {
+
+    }
 
     // Discarding
     protected static void TestDiscard(SJReader reader, string discardKey = JsonDataDiscardKey)

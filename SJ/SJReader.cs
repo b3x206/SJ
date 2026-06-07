@@ -244,70 +244,88 @@ namespace SJ
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected static string Tk(char c) => c == '\0' ? "\\0/0" : $"{c}/{(int)c}";
 
+        // CheckEOF should maybe "out" a Value or "ref" current Value.
         /// <summary>
         /// Validates and skips comment. This ignores the <see cref="allowComments"/> and parses the comment.
         /// <br><b>Note : </b> This method only skips and validates comments, if the character at <see cref="current"/> is '/'.
         /// It will fail on white space intentionally, but won't set error (because it isn't comment).
         /// You should check <c>At(current) == '/' &amp;&amp; <see cref="SkipComment"/></c></br>
         /// </summary>
-        /// <returns>Whether if the comment block was valid. If <see cref="ThrowOnError"/> is set, this method will throw.</returns>
+        /// <returns>Whether if the comment block was valid.</returns>
         protected bool SkipComment()
         {
-            if (current < Length)
+            (int start, int end) = GetCommentRange(true);
+            return start >= 0 && end >= 0;
+        }
+        /// <summary>
+        /// Read a range of comments, starting from <see cref="current"/> for the reader data.
+        /// </summary>
+        /// <returns>Start and ending range. If the block isn't a comment, -1 is returned for both regions</returns>
+        protected (int start, int end) GetCommentRange(bool setError = true)
+        {
+            int start = current, end = current;
+            if (start < Length)
             {
                 // I should validate the current character twice, for external uses.
-                char ch = At(current);
+                char ch = At(end);
                 if (ch == '/')
                 {
-                    char next = At(++current);
+                    char next = At(++end);
                     if (next == '/')
                     {
                         while (ch != '\n')
                         {
-                            if (current >= Length)
+                            if (end >= Length)
                             {
                                 // Ended with // .... <EOF
-                                return true;
+                                return (start, end);
                             }
 
-                            ch = At(++current);
+                            ch = At(++end);
                         }
 
                         // the whitespace '\n' will be implicitly skipped.
-                        return true;
+                        return (start, end);
                     }
                     else if (next == '*')
                     {
                         while (ch != '*' && next != '/')
                         {
-                            if (current >= Length)
+                            if (end >= Length)
                             {
-                                Error = $"Expected */, got '{Tk(ch)}+{Tk(next)}'";
-                                return false;
+                                if (setError)
+                                {
+                                    Error = $"Expected */, got '{Tk(ch)}+{Tk(next)}'";
+                                }
+                                return (-1, -1);
                             }
 
-                            ch = At(++current);
-                            next = At(current + 1);
+                            ch = At(++end);
+                            next = At(end + 1);
                         }
 
                         // skip the '*/' (as those are actual non-ws chars)
-                        current += 2;
-                        return true;
+                        end += 2;
+                        return (start, end);
                     }
                     else
                     {
-                        Error = $"Unexpected comment token '{Tk(next)}', expected '/ or *'";
-                        return false;
+                        if (setError)
+                        {
+                            Error = $"Unexpected comment token '{Tk(next)}', expected '/ or *'";
+                        }
+                        return (-1, -1);
                     }
                 }
                 else
                 {
-                    return false;
+                    // Not skipping while on a comment block
+                    return (-1, -1);
                 }
             }
 
-            // Nothing to skip
-            return true;
+            // Nothing to skip, but not an "error"
+            return (start, end);
         }
         /// <summary>
         /// Check remaining tokens after the JSON document is finished. (depth == 0)

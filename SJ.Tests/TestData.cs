@@ -40,10 +40,10 @@ public static class TestData
     ""empty"": { ""obj"": {}, ""arr"": [] }
 }";
     // Fire data
-    public static readonly string JsonDataSpamValue = string.Concat(Enumerable.Repeat("🔥", 32768));
     // Creates 1MB of UTF-8 string. Quite wholesome.
     public static readonly string DataEmojiSpam = string.Concat(Enumerable.Repeat("🅱️🅱️🅱️🍄‍🍕🍕🍕🍄‍🍄‍🍕🍄‍🍕🍕🍕🍕🍄‍🍕🍄‍", 10240));
     public const string JsonDataSpamKey = "YoThisDataIsFire";
+    public static readonly string JsonDataSpamValue = string.Concat(Enumerable.Repeat("🔥", 32768));
     public static readonly string JsonData3 = $@"{{
     ""{JsonDataSpamKey}"": ""{JsonDataSpamValue}""
 }}";

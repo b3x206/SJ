@@ -82,6 +82,68 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             DisposeWriter(writer);
         }
     }
+    [TestMethod]
+    public void TestWriteEmojiSpam()
+    {
+        var writer = CreateWriter();
+        try
+        {
+            writer.ThrowOnError = true;
+
+            writer.WriteString(TestData.DataEmojiSpam);
+            if (!writer.CanReadData)
+            {
+                Assert.Inconclusive($"[!] Cannot read data from this writer '{writer}'");
+            }
+
+            // Buffered writers must truncate and write this correctly
+            Assert.AreEqual(writer.ReadData(), $"\"{TestData.DataEmojiSpam}\"");
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
+
+    private static readonly Type[] _ReadDataConsistencyExceptionTypes = [typeof(NotSupportedException), typeof(InvalidOperationException)];
+    /// <summary>
+    /// Exception types expected from your variety of Writer.
+    /// </summary>
+    public virtual Type[] ReadDataConsistencyExceptionTypes => _ReadDataConsistencyExceptionTypes;
+    [TestMethod]
+    public void TestReadDataConsistency()
+    {
+        var writer = CreateWriter();
+        try
+        {
+            writer.ThrowOnError = true;
+            using (writer.Object())
+            {
+                writer.WriteKV("hello", "world");
+            }
+
+            if (!writer.CanReadData)
+            {
+                try
+                {
+                    writer.ReadData();
+                }
+                catch (Exception ex) when (Enumerable.Contains(ReadDataConsistencyExceptionTypes, ex.GetType()))
+                {
+                    Console.WriteLine($"Caught exception '{ex}'");
+                }
+            }
+            else
+            {
+                // Reading written data must equal written count
+                Assert.AreEqual(writer.count, writer.ReadData().Length);
+            }
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
 
     [TestMethod]
     [ExpectedException(typeof(SJWriter.WriteException))]
