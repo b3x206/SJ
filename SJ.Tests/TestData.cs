@@ -39,6 +39,14 @@ public static class TestData
     ""logic"": [true, false, null],
     ""empty"": { ""obj"": {}, ""arr"": [] }
 }";
+    // Fire data
+    public static readonly string JsonDataSpamValue = string.Concat(Enumerable.Repeat("🔥", 32768));
+    // Creates 1MB of UTF-8 string. Quite wholesome.
+    public static readonly string DataEmojiSpam = string.Concat(Enumerable.Repeat("🅱️🅱️🅱️🍄‍🍕🍕🍕🍄‍🍄‍🍕🍄‍🍕🍕🍕🍕🍄‍🍕🍄‍", 10240));
+    public const string JsonDataSpamKey = "YoThisDataIsFire";
+    public static readonly string JsonData3 = $@"{{
+    ""{JsonDataSpamKey}"": ""{JsonDataSpamValue}""
+}}";
     public const string JsonDataDiscardKey = "secretInfo";
     public const string JsonDataDiscard = $@"{{
     ""userName"": ""gamer"",
@@ -96,6 +104,8 @@ public static class TestData
 } // Our line ends with */";
 
     // - File Data
+    // * "valid.json" is from some random website.
+    // * JSON data sets are from https://microsoftedge.github.io/Demos/json-dummy-data/
     public static readonly string BaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
     public static readonly string JsonFileValidName = Path.Combine(BaseDirectory, "TestFiles", "valid.json"),
         JsonFileLargeName = Path.Combine(BaseDirectory, "TestFiles", "5mb.json"),
@@ -104,7 +114,7 @@ public static class TestData
         JsonFileInvalidNoColon = Path.Combine(BaseDirectory, "TestFiles", "missing_colon.json"),
         JsonFileInvalidBinary = Path.Combine(BaseDirectory, "TestFiles", "binary.json");
 
-    // Escape Data
+    // - Escape Data
     public const string EscapeContent = "Quote: \", Backslash: \\, Tab: \t, Newline: \n, Pizza: \uD83C\uDF55, The 🅱 variant: \uD83C\uDD71\uFE0F";
     public const string EscapeBrokenUnescape = "Oh wow, I'm escaping things I shouldn't! : \\a\\b\\c\\d \\e\\f\\g\\h\\i\\j\\k \\l\\m\\n\\o\\p\\q\\r\\s\\ t\\u\\v\\w\\x\\y\\z\\A\\B\\C \\D\\E\\F\\G\\H\\I\\J\\K\\L\\M\\N\\O\\P\\Q\\ R\\S\\T\\U\\V \\W\\X \\Y\\Z'";
     public const string EscapeBrokenSurrogate = "\uDF55\uD83C\uDD71\uD83C\uFE0F In C++, surrogate escape you!";

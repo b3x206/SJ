@@ -32,9 +32,11 @@ namespace SJ
     ///         base.Reset();
     ///         data.Clear(); // Or reset the position to start and truncate remaining data.
     ///     }
-    ///     public override string ToString()
+    ///     public override bool CanReadData => true;
+    ///     public override string ReadData()
     ///     {
-    ///         // Convert the resulting data to string, if necessary.
+    ///         // Convert the resulting data to string. Called if necessary.
+    ///         // Could be unnecessary on things like Stream- based writers
     ///         return data.ToString();
     ///     }
     /// }
@@ -88,6 +90,16 @@ namespace SJ
                 index = 0;
             }
             public static implicit operator WriteStackInfo(SJType type) => new WriteStackInfo(type);
+
+            public override readonly string ToString()
+            {
+                if (!Valid)
+                {
+                    return $"[{base.ToString()}]";
+                }
+
+                return $"[{base.ToString()}] type={type}, index={index}";
+            }
         }
 
         public readonly struct ObjectScope : IDisposable
@@ -759,6 +771,24 @@ namespace SJ
 
             return new ObjectScope(this);
         }
+
+        /// <summary>
+        /// If data can be read.
+        /// </summary>
+        /// <remarks>
+        /// You should also override this if <see cref="ReadData"/> has an implementation.
+        /// <br>Check using the implementation of WriterUnitTests on your target class.</br>
+        /// </remarks>
+        public virtual bool CanReadData => false;
+        /// <summary>
+        /// Read the written data from this writer, if applicable.
+        /// </summary>
+        /// <exception cref="NotSupportedException"></exception>
+        public virtual string ReadData() => throw new NotSupportedException("Cannot read data from this writer.");
+        /// <summary>
+        /// Shows a simple preview of the current state.
+        /// </summary>
+        public override string ToString() => $"[SJWriter] count={count}, error={Error}, top={{{Top}}}";
 
         public virtual void Reset()
         {

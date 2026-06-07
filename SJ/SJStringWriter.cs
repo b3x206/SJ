@@ -36,9 +36,7 @@ namespace SJ
             base.Reset();
             sb.Clear();
         }
-        public override string ToString()
-        {
-            return sb.ToString();
-        }
+        public override bool CanReadData => true;
+        public override string ReadData() => sb.ToString();
     }
 }

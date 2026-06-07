@@ -1,0 +1,226 @@
+﻿using static SJ.Tests.WriterTester;
+
+namespace SJ.Tests;
+
+[TestClass]
+public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
+{
+    /// <summary>
+    /// Initialize an empty instance (that writes to memory generally) of <typeparamref name="TWriter"/>.
+    /// </summary>
+    public abstract TWriter CreateWriter();
+    /// <summary>
+    /// Dispose <paramref name="writer"/> object. This method should throw.
+    /// </summary>
+    /// <returns>Only returns whether if <paramref name="writer"/> is a valid 
+    /// <see cref="IDisposable"/> and <see cref="IDisposable.Dispose"/> was called.</returns>
+    public virtual bool DisposeWriter(TWriter writer)
+    {
+        if (writer is IDisposable d)
+        {
+            d.Dispose();
+            return true;
+        }
+
+        return false;
+    }
+
+    [TestMethod]
+    public void TestRootWrite()
+    {
+        var writer = CreateWriter();
+        try
+        {
+            writer.indentSize = 4;
+            writer.ThrowOnError = false;
+
+            TestRootWith(writer);
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
+    [TestMethod]
+    public void TestWrite()
+    {
+        var writer = CreateWriter();
+        try
+        {
+            writer.indentSize = 4;
+            writer.ThrowOnError = true;
+
+            // Writing an object that looks like this.
+            using (writer.Object())
+            {
+                // Though ThrowOnError is true, so :shrug:
+                Assert.IsTrue(WriteTestValues(writer), "Writing must go without any errors");
+
+                using (writer.ArrayKV("test on le array"))
+                {
+                    Assert.IsTrue(WriteTestValues(writer), "Writing must go without any errors");
+                }
+            }
+
+            // Read resulting data
+            if (writer.CanReadData)
+            {
+                string? data = writer.ReadData();
+                // Validate
+                Assert.AreEqual(writer.count, data?.Length, $"Resulting writer counts must match. Non matching writer data: {data}");
+                ReaderTester.Read(new SJStringReader(data));
+                // And show
+                Console.WriteLine(data);
+            }
+            else
+            {
+                Assert.Inconclusive("[!] Skipping validation of write data as this writer type does not support reading data. If the test has reached here, writing ended without any errors.");
+            }
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
+
+    [TestMethod]
+    [ExpectedException(typeof(SJWriter.WriteException))]
+    public void TestDepth()
+    {
+        var writer = CreateWriter();
+        try
+        {
+            writer.indentSize = 4;
+            writer.ThrowOnError = true;
+
+            Assert.IsTrue(TestDepthWith(writer), "Depth test must fail"); // ← Must throw WriteException instead
+            Console.WriteLine($"fail : {writer}");
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
+    [TestMethod]
+    public void TestDepthNoExcept()
+    {
+        var writer = CreateWriter();
+        try
+        {
+            writer.indentSize = 4;
+            writer.ThrowOnError = false;
+            Assert.IsTrue(TestDepthWith(writer), "Depth test must fail");
+            Assert.That.IsNotNullOrEmpty(writer.Error, "Writer should have an error set after failing");
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
+
+    static bool TestStackWith(SJWriter writer)
+    {
+        writer.BeginObject();
+
+        writer.WriteKey("Fun fact : ");
+
+        writer.BeginArray();
+        bool result = !writer.EndObject(); // whoops
+        result = result || !writer.EndArray();
+
+        return result;
+    }
+    [TestMethod]
+    [ExpectedException(typeof(SJWriter.WriteException))]
+    public void TestStack()
+    {
+        var writer = CreateWriter();
+        try
+        {
+            writer.indentSize = 3;
+            writer.ThrowOnError = true;
+
+            Assert.IsTrue(TestStackWith(writer), "Stack test must fail");
+            Console.WriteLine($"fail : {writer}");
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
+    [TestMethod]
+    public void TestStackNoExcept()
+    {
+        var writer = CreateWriter();
+        try
+        {
+            writer.indentSize = 4;
+            writer.ThrowOnError = false;
+            Assert.IsTrue(TestStackWith(writer), "Stack test must fail");
+            Assert.That.IsNotNullOrEmpty(writer.Error, "Writer should have an error set after failing");
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
+
+    [TestMethod]
+    public void TestNegativeWrite()
+    {
+        // The codepaths are generally the same so I will only test WriteLiteralValue and WriteKey instead
+        var writer = CreateWriter();
+        try
+        {
+            writer.ThrowOnError = false;
+
+            using (writer.Object())
+            {
+                // Mess up the KV order
+                writer.Write(3.141592);
+                Assert.That.IsNotNullOrEmpty(writer.Error);
+
+                writer.Reset(); // Resetting within an object scope that is successful will call "EndObject" and fail the object.
+                writer.BeginObject(); // So start an object to not cause that
+                                      // ?? : Perhaps each scope can hold "version" (which changes with every write)
+                                      //      of the writer to avoid this footgun? (the versions are checked in the writer as well?)
+                                      //      To avoid this, I need to store the version on the scope and the stack and then match the versions (or whether if the version is present on the stack at all. Which is more code so meh).
+
+                // ↓ This one will completely fail, unlike the object that has partially succeeded.
+                using (writer.Array()) { }
+                Assert.That.IsNotNullOrEmpty(writer.Error);
+
+                // And it will error out with EndObject. Not that it matters
+                writer.Reset();
+                writer.BeginObject();
+
+                // Test WriteKey twice
+                writer.WriteKey("aaa");
+                writer.WriteKey("bbb");
+                Assert.That.IsNotNullOrEmpty(writer.Error);
+                writer.BeginObject();
+                Assert.That.IsNotNullOrEmpty(writer.Error);
+
+                // Test WriteKey on array
+                writer.Reset();
+                writer.BeginObject();
+                writer.WriteKey("array");
+                using (writer.Array())
+                {
+                    writer.WriteKey("keys on my array? it's more likely than you think");
+                    Assert.That.IsNotNullOrEmpty(writer.Error);
+                }
+
+                writer.Reset();
+            }
+
+            Console.WriteLine($"Error present : {writer.Error}");
+            writer.Reset();
+            Assert.That.IsNullOrEmpty(writer.Error);
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
+}

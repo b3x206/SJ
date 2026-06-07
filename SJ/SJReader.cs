@@ -20,6 +20,7 @@ namespace SJ
         Object,
         Array,
         End,
+        Comment
     }
 
     /// <summary>
@@ -71,6 +72,10 @@ namespace SJ
     /// </example>
     public abstract class SJReader
     {
+        // TODO:
+        // * Generic class (with the character unit type), or to avoid boxing, byte version that does ASCII (ignores UTF-8 but should work)
+        // * SJType.Comment captures [explicit Read()] and ignoreCommentParsing [auto skip with yielded Read()]
+
         /// <summary>
         /// Exception thrown on an error case while reading JSON.
         /// </summary>
@@ -155,6 +160,11 @@ namespace SJ
         /// <br>/* &lt;-- until end token --&gt; */</br>
         /// </summary>
         public bool allowComments = false;
+        /// <summary>
+        /// Captured JSON comments are skipped
+        /// <br>(they are not pushed as JSON values from <see cref="Read"/> method)</br>
+        /// </summary>
+        public bool ignoreCapturedComments = true;
         protected bool _ThrowOnError = false;
         /// <summary>
         /// When an erroreneous case occurs (or <see cref="Error"/> is set to anything other 
