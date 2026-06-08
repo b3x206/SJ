@@ -65,7 +65,16 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
             throw new ArgumentException($"'{nameof(tks)}' must exactly have two characters, one for opening and one for closing.", nameof(tks));
         }
 
-        return CreateWithString(string.Concat(string.Join("", Enumerable.Repeat(tks[0], maxDepth + 1)), string.Join("", Enumerable.Repeat(tks[1], maxDepth + 1))));
+        if (tks[0] == '{')
+        {
+            // keys are needed for object
+            // {"a":{"a":...
+            return CreateWithString(string.Concat(tks[0], string.Join("", Enumerable.Repeat($"\"a\":{tks[0]}", maxDepth)), string.Join("", Enumerable.Repeat(tks[1], maxDepth + 1))));
+        }
+        else
+        {
+            return CreateWithString(string.Concat(string.Join("", Enumerable.Repeat(tks[0], maxDepth + 1)), string.Join("", Enumerable.Repeat(tks[1], maxDepth + 1))));
+        }
     }
     /// <summary>
     /// Depth of property used on "MaxNRecursion". Override if your class initializes this property differently on a constructor.
@@ -135,7 +144,15 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
         Assert.AreEqual(SJType.String, root.type);
         Assert.IsTrue(root.Slice().SequenceEqual(DataEmojiSpam), "Sliced value must equal the string inside the literal.");
     }
-
+    // Check tricky conditions on the comma/colon state
+    [TestMethod]
+    [DataRow(64)]
+    [Timeout(SmallTestTimeout)]
+    public void TestValidDeepObjects(int depth) => Read(CreateWithMaxRecursionString("{}", depth));
+    [TestMethod]
+    [DataRow(64)]
+    [Timeout(SmallTestTimeout)]
+    public void TestValidDeepArray(int depth) => Read(CreateWithMaxRecursionString("[]", depth));
     [TestMethod]
     [Timeout(SmallTestTimeout)]
     [DataRow(@"[""hello"" 1 2 3 4 5]")]
@@ -175,7 +192,7 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
                     break;
                 case SJType.Array:
                     Console.WriteLine($"{k.Slice()} :");
-                    while (reader.IterateArray(v, out var av))
+                    while (reader.IterateEntries(v, out var av))
                     {
                         Console.WriteLine($"  {av.Slice()}");
                     }
@@ -200,10 +217,18 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestJSCInvalid() => ReadJSC(CreateWithString(JsonDataCommentInvalid));
 
-    // JSC with Capture
+    // JSC with Capture (hell)
     [TestMethod]
     [Timeout(SmallTestTimeout)]
     public void TestJSCWithCapture() => ReadJSC(CreateWithString(JsonDataComment), false);
+    [TestMethod]
+    [Timeout(SmallTestTimeout)]
+    [DataRow(@"{ ""key"" /* inline */ : ""value"" }")]
+    [DataRow(@"{ ""key"" : /* inline */ ""value"" }")]
+    [DataRow(@"{ ""key"" : ""value"" /* trailing */ , ""key2"": ""value2"" }")]
+    [DataRow(@"[ 1, 2, 3 /* trailing array */ , 4, 5]")]
+    [DataRow(@"[ 1, 2, 3 /* trailing array */]")]
+    public void TestJSCWithTrickyCapture(string data) => ReadJSC(CreateWithString(data), false);
     [TestMethod]
     [Timeout(SmallTestTimeout)]
     [ExpectedException(typeof(SJReader.ReadException))]

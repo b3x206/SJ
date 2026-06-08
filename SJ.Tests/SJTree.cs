@@ -61,7 +61,7 @@ sealed class SJTree
 
             case SJType.Array:
                 {
-                    while (reader.IterateArray(root, out var v))
+                    while (reader.IterateValues(root, out var v))
                     {
                         var node = new SJTree();
                         WriteFromInternal(node, reader, v);

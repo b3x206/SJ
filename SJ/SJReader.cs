@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -99,28 +98,38 @@ namespace SJ
             public readonly SJReader reader;
             public SJType type;
             public int start, end;
-            public int depth;
+            /// <summary>
+            /// <see cref="SJReader.depth"/> of the <see cref="reader"/> while this Value was being created.
+            /// </summary>
+            public readonly int depth;
+            /// <summary>
+            /// Object typed value depth of this value. This is used for <see cref="DiscardUntil(int)"/>.
+            /// <br><b>Only applicable when type is <see cref="SJType.Object"/>, <see cref="SJType.Array"/> or <see cref="SJType.End"/>!</b></br>
+            /// </summary>
+            public int objectDepth;
 
             public Value(SJReader reader)
             {
                 this.reader = reader;
                 type = SJType.Error;
                 start = end = 0;
-                depth = 0;
+                objectDepth = 0;
+                depth = reader?.depth ?? 0;
             }
-            public Value(SJReader reader, SJType type, int start, int end, int depth)
+            public Value(SJReader reader, SJType type, int start, int end, int objectDepth, int depth)
             {
                 this.reader = reader;
                 this.type = type;
                 this.start = start;
                 this.end = end;
+                this.objectDepth = objectDepth;
                 this.depth = depth;
             }
 
-            public static Value Error() => new Value(null, SJType.Error, -1, -1, -1);
-            public static Value Error(SJReader reader) => new Value(reader, SJType.Error, -1, -1, -1);
-            public static Value Null() => new Value(null, SJType.Null, -1, -1, -1);
-            public static Value Null(SJReader reader) => new Value(reader, SJType.Null, -1, -1, -1);
+            public static Value Error() => new Value(null, SJType.Error, -1, -1, -1, -1);
+            public static Value Error(SJReader reader) => new Value(reader, SJType.Error, -1, -1, -1, reader?.depth ?? -1);
+            public static Value Null() => new Value(null, SJType.Null, -1, -1, -1, -1);
+            public static Value Null(SJReader reader) => new Value(reader, SJType.Null, -1, -1, -1, reader?.depth ?? -1);
 
             public readonly int Length
             {
@@ -147,7 +156,7 @@ namespace SJ
 
             public override readonly string ToString()
             {
-                return $"[SJReader.Value] type:{type}, start:{start}, end:{end}, depth:{depth}";
+                return $"[SJReader.Value] type:{type}, start:{start}, end:{end}, depth:{objectDepth}";
             }
         }
 
@@ -233,14 +242,17 @@ namespace SJ
         public bool Ended => !string.IsNullOrEmpty(Error) || current >= Length;
 
         public Stack<SJType> lastRecursableTypes;
+        
+        protected enum ExpectState { None = 0, Comma = 1 << 0, Key = 1 << 1, Colon = 1 << 2, Value = 1 << 3 }
         /// <summary>
-        /// State for checking colons in <see cref="SJType.Object"/>
+        /// State for checking certain tokens within types like <see cref="SJType.Object"/> and <see cref="SJType.Array"/>
         /// </summary>
-        protected int _ColonsRequired = -1;
+        protected ExpectState _ExpectState = ExpectState.None;
         /// <summary>
-        /// State for checking commas in <see cref="SJType.Array"/>
+        /// Last key read on a object key/value pair. If a non-comment value block is returned while this is set,
+        /// while being on a <see cref="SJType.Object"/>, this was the key that was for it.
         /// </summary>
-        protected int _CommaRequired = -1;
+        public Value LastKey { get; protected set; }
 
         /// <summary>
         /// Length of the data to read.
@@ -313,11 +325,6 @@ namespace SJ
                             }
 
                             ch = At(++end);
-                        }
-                        // skip the '\n', '\r' or '\r\n'
-                        if (At(++end) == '\r' && (end + 1) < Length && At(end + 1) == '\n')
-                        {
-                            end++;
                         }
                         return (start, end);
                     }
@@ -429,7 +436,7 @@ namespace SJ
             {
                 result.type = SJType.Error;
                 result.start = result.end = 0;
-                result.depth = -1;
+                result.objectDepth = -1;
                 return result;
             }
             if (Length <= 0)
@@ -440,11 +447,11 @@ namespace SJ
             if (current >= Length)
             {
                 // Reaching end of file is no longer an error, but it should return an empty "end" value.
-                // Error = "Reached EOF";
+                // Error = "Reached end of data";
                 // goto _Top;
                 result.type = SJType.End;
                 result.end = current;
-                result.depth = -1;
+                result.objectDepth = -1;
                 return result;
             }
             if (maxDepth > 0 && depth > maxDepth)
@@ -497,24 +504,24 @@ namespace SJ
                             Error = "Unexpected ':' in top level array";
                             goto _Top;
                         }
-                        else if (_ColonsRequired == 0)
+                        else if ((_ExpectState & ExpectState.Colon) != ExpectState.Colon)
                         {
                             Error = "Unexpected ':', exceeding required";
                             goto _Top;
                         }
 
-                        _ColonsRequired = Math.Max(-1, _ColonsRequired - 1);
+                        _ExpectState &= ~ExpectState.Colon;
                     }
                     else if (ch == ',')
                     {
                         // both Array and Object get commas
-                        if (_CommaRequired == 0)
+                        if ((_ExpectState & ExpectState.Comma) != ExpectState.Comma)
                         {
                             Error = "Unexpected ',', exceeding required";
                             goto _Top;
                         }
 
-                        _CommaRequired = Math.Max(-1, _CommaRequired - 1);
+                        _ExpectState &= ~ExpectState.Comma;
                     }
                     else
                     {
@@ -531,23 +538,13 @@ namespace SJ
                 current++;
                 goto _Top;
             }
-            else if (_ColonsRequired > 0)
+            else if ((_ExpectState & ExpectState.Colon) == ExpectState.Colon)
             {
                 // Colons are strict, they are seperator for key/value
-                Error = $"Unknown token '{Tk(ch)}', expected ':'";
+                Error = $"Unexpected '{Tk(ch)}', expected ':'";
                 goto _Top;
             }
-            // Parse : Array | Object
-            else if (ch == '{' || ch == '[')
-            {
-                result.type = (ch == '{') ? SJType.Object : SJType.Array;
-                lastRecursableTypes.Push(result.type);
-                result.depth = ++depth;
-                ch = At(++current);
-
-                // If starting an object, comma is not expected
-                _CommaRequired = 0;
-            }
+            // Parse : Array | Object End (overrides comma)
             else if (ch == '}' || ch == ']')
             {
                 result.type = SJType.End;
@@ -558,16 +555,18 @@ namespace SJ
                     Error = (ch == '}') ? "Stray '}'" : "Stray ']'";
                     goto _Top;
                 }
-                if (_CommaRequired == 0)
+                // Should also check whether if there were any values previously, as comma is not required
+                if ((_ExpectState & ExpectState.Comma) != ExpectState.Comma)
                 {
-                    Error = "Trailing comma character";
+                    Error = "Trailing comma character for the last value before end";
                     goto _Top;
                 }
 
                 // Likely a comma is required for the next entry.
+                // However this semantic could fail for array like [[]] if the array / object declarations are lacking)
                 if (depth > 0)
                 {
-                    _CommaRequired = 1;
+                    _ExpectState |= ExpectState.Comma;
                 }
 
                 ch = At(++current);
@@ -579,13 +578,32 @@ namespace SJ
                 }
             }
             // Validate: Commas
-            else if (_CommaRequired > 0)
+            else if ((_ExpectState & ExpectState.Comma) == ExpectState.Comma)
             {
                 // Commas are more flexible and can be found anywhere else,
                 // however they are not required for object declarations,
                 // but they are required for literals and object endings.
                 Error = $"Unknown token '{Tk(ch)}', expected ','";
                 goto _Top;
+            }
+            // Parse : Array | Object Start
+            else if (ch == '{' || ch == '[')
+            {
+                if (ch == '{')
+                {
+                    _ExpectState |= ExpectState.Key;
+                    result.type = SJType.Object;
+                }
+                else
+                {
+                    result.type = SJType.Array;
+                }
+                lastRecursableTypes.Push(result.type);
+                result.objectDepth = ++depth;
+                ch = At(++current);
+
+                // If starting an object, comma is not expected and this is object "declaration" without comma
+                _ExpectState &= ~ExpectState.Comma;
             }
             // Parse : Number
             else if (char.IsDigit(ch) || ch == '-')
@@ -680,92 +698,95 @@ namespace SJ
         protected void DiscardUntil(int depth)
         {
             var value = Value.Null();
-            while (this.depth != depth && value.type != SJType.Error)
+            while (!Ended && this.depth != depth && value.type != SJType.Error)
             {
                 value = Read();
             }
         }
         /// <summary>
-        /// Iterate the values of <paramref name="arrayValue"/> if it's an <see cref="SJType.Array"/>.
+        /// Iterate the values of <paramref name="value"/> if it's an <see cref="SJType.Array"/> while the value entry depth is same.
+        /// <br>If the <paramref name="value"/> is <see cref="SJType.Object"/>, the 
+        /// last read key and value is stored in <see cref="LastKey"/> and <see cref="LastValue"/>.
+        /// Both of these values are available until </br>
         /// </summary>
-        public bool IterateArray(Value arrayValue, out Value result)
+        public bool IterateValues(Value value, out Value result)
         {
-            if (arrayValue.type != SJType.Array)
+            if (value.type != SJType.Array)
             {
                 result = Value.Error(this);
                 return false;
             }
 
-            // ↓ if the array contains other recursive elements, this dives and goes back to the current array depth
-            DiscardUntil(arrayValue.depth);
+            DiscardUntil(value.objectDepth);
             result = Read();
             if (result.type != SJType.Object && result.type != SJType.Array && result.type != SJType.Comment)
             {
-                // Did not start an object/array, is simply the next value.
-                _CommaRequired = 1;
+                // Did not start an object/array, is simply the next value on the array.
+                _ExpectState |= ExpectState.Comma;
             }
             return result.type != SJType.Error && result.type != SJType.End;
         }
+        public enum ObjectEntry { None, Key, Value }
         /// <summary>
-        /// Iterate the key/value of <paramref name="objectValue"/> if it's an <see cref="SJType.Object"/>.
+        /// Iterate <see cref="SJType.Object"/> typed <paramref name="value"/> with selector for the entry type.
         /// </summary>
-        public bool IterateObject(Value objectValue, out Value key, out Value value)
+        /// <param name="value">Value that is <see cref="SJType.Object"/>.</param>
+        /// <param name="result">Value entry within the object declaration. What this is depends on <paramref name="type"/>.</param>
+        /// <param name="type">
+        /// Object type of <paramref name="result"/>.
+        /// Valid keys are <see cref="ObjectEntry.Key"/>, values are
+        /// </param>
+        /// <returns>Whether if more data is available to read from <paramref name="value"/>.</returns>
+        public bool IterateObject(Value value, out ObjectEntry type, out Value result)
         {
-            if (objectValue.type != SJType.Object)
+            type = ObjectEntry.None;
+            if (value.type != SJType.Object)
             {
-                key = value = Value.Error(this);
+                result = Value.Error(this);
                 return false;
             }
 
-            // Haven't considered this, but if you start an object (K/V with state)
-            // and write a comment first, the key will be a comment.
-            // Since comments aren't to be ignored, they should also be
-            // checked in Object and skipped accordingly.
-            DiscardUntil(objectValue.depth);
-            key = Read();
-            if (key.type == SJType.Error || key.type == SJType.End)
+            DiscardUntil(value.objectDepth);
+            result = Read();
+            if (result.type == SJType.Error || result.type == SJType.End)
             {
-                value = Value.Error(this);
+                result = Value.Error(this);
                 return false;
             }
-            if (!ignoreCapturedComments && key.type == SJType.Comment)
+            // read must not return SJType.Comment while "ignoreCapturedComments" is true
+            if (result.type == SJType.Comment)
             {
-                // Yield again to call IterateObject.
-                // Comment is stored as "Key" or "Value"
-                // Array does not break, but it will ignore comma instead.
-                value = key;
+                // next comment bradar
                 return true;
             }
-            if (key.type != SJType.String)
-            {
-                value = Value.Error(this);
-                Error = "Expected String as key";
-                return false;
-            }
 
-            _ColonsRequired = 1;
-            value = Read();
+            if ((_ExpectState & ExpectState.Key) == ExpectState.Key)
+            {
+                if (result.type != SJType.String)
+                {
+                    result = Value.Error(this);
+                    Error = "Expected String as key";
+                    return false;
+                }
 
-            if (value.type == SJType.Error)
-            {
-                return false;
-            }
-            if (value.type == SJType.End)
-            {
-                Error = "Unexpected object end, expected value";
-                return false;
-            }
-            _ColonsRequired = -1;
-            // Value needs comma afterwards, but SJType.End could end it.
-            // If SJType.End ends it, trailing comma could be "allowed" by not checking CommaRequired == 1 on "End"
-            if (value.type != SJType.Object && value.type != SJType.Array && value.type != SJType.Comment)
-            {
-                // Did not start an object/array, is simply the next value.
-                _CommaRequired = 1;
-            }
+                type = ObjectEntry.Key;
+                LastKey = result;
+                _ExpectState |= ExpectState.Colon;
 
-            return true;
+                return true;
+            }
+            else
+            {
+                type = ObjectEntry.Value;
+                // Value needs comma afterwards, but SJType.End could end it, so the check does that 
+                _ExpectState &= ~ExpectState.Colon;
+                // Expect both key and comma for the next KV read
+                _ExpectState |= ExpectState.Comma | ExpectState.Key;
+
+                return true;
+            }
         }
+
         /// <summary>
         /// Get the current readout location.
         /// </summary>
@@ -805,7 +826,7 @@ namespace SJ
         {
             current = 0;
             depth = 0;
-            _ColonsRequired = _CommaRequired = -1;
+            _ExpectState = ExpectState.None;
             Error = null;
             lastRecursableTypes?.Clear();
         }

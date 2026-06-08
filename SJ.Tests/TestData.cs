@@ -87,14 +87,14 @@ public static class TestData
     public const string JsonDataStackingInvalid = @"{
     ""key"": { ""another key"": [{]}, ]
 }";
-
+    // This comment thing got out of hand because I wanted to read it's data somehow :(
     public const string JsonDataComment = @"/* Let's start our ""invalid"" JSON journey! */
 // Also some more lines.
 {
         // I like annotating my JSON, but it gets deleted when it's serialized :(
         /* wen eta fix this? */
         ""Array"": [1,2,3,4,5,6,7,8, /* oops convenient comment */ 9,10,11],
-        ""Objects"": { ""Yes"": true, ""No"": false, ""Empty??"": null, ""Whatever"": ""/* Not really a comment. */"" } // I like putting comments where inconvenient
+        ""Objects"": /* OH NO */ { ""Yes"": true, ""No"": false, ""Empty??"": null, ""Whatever"": ""/* Not really a comment. */"" } // I like putting comments where inconvenient
 } // Our line ends with */";
     public const string JsonDataCommentInvalid = @"/* Let's start our invalid JSON journey! */
 // Also some more lines.
@@ -106,6 +106,7 @@ public static class TestData
     // - File Data
     // * "valid.json" is from some random website.
     // * JSON data sets are from https://microsoftedge.github.io/Demos/json-dummy-data/
+    // * TODO : Embed these into the assembly, not needing any file system
     public static readonly string BaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
     public static readonly string JsonFileValidName = Path.Combine(BaseDirectory, "TestFiles", "valid.json"),
         JsonFileLargeName = Path.Combine(BaseDirectory, "TestFiles", "5mb.json"),

@@ -51,14 +51,14 @@ namespace SJ.Benchmark
                     counter += value.Slice().Length;
                     break;
                 case SJType.Object:
-                    while (reader.IterateObject(value, out var k, out var v))
+                    while (reader.IterateValues(value, out var keyOrValue))
                     {
-                        counter += k.Slice().Length;
-                        ReadRecursiveInternal(reader, v, ref counter);
+                        // counter += keyOrValue.Slice().Length;
+                        ReadRecursiveInternal(reader, keyOrValue, ref counter);
                     }
                     break;
                 case SJType.Array:
-                    while (reader.IterateArray(value, out var v))
+                    while (reader.IterateValues(value, out var v))
                     {
                         ReadRecursiveInternal(reader, v, ref counter);
                     }
