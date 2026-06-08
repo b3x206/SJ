@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using static SJ.SJReader;
 
 namespace SJ
 {
@@ -62,7 +64,7 @@ namespace SJ
     ///     // This is used as a limiter.
     ///     public override int Length => _Data?.Length ?? 0;
     ///     // Because I ported the pointer stuff as-is, some parts of the parser may read off by one.
-    ///     // It is recommended to do an bound check and return EOF of your choice
+    ///     // It is recommended to do a bound check and return EOF of your choice
     ///     protected override char At(int i) => i >= 0 && i < Length ? _Data[i] : '\0';
     ///     // Because each value slice is evaluated lazily, the data ranges must persist and should be representable easily as a range (making arbitrary Streams much harder)
     ///     // Note that there isn't much of a reason to do this, if you read the data as soon as it's received from the SJReader.
@@ -73,8 +75,8 @@ namespace SJ
     public abstract class SJReader
     {
         // TODO:
-        // * Generic class (with the character unit type), or to avoid boxing, byte version that does ASCII (ignores UTF-8 but should work)
-        // * SJType.Comment captures [explicit Read()] and ignoreCommentParsing [auto skip with yielded Read()]
+        // * Generic class (with the character unit type), or to avoid boxing,
+        //   byte version that does ASCII (ignores UTF-8, but should work as all JSON tokens are within ascii)
 
         /// <summary>
         /// Exception thrown on an error case while reading JSON.
@@ -163,6 +165,10 @@ namespace SJ
         /// <summary>
         /// Captured JSON comments are skipped
         /// <br>(they are not pushed as JSON values from <see cref="Read"/> method)</br>
+        /// <br><b>Caution:</b> If you set this <see langword="false"/>, the document must be 
+        /// read differently compared to the basic method, as EOF validation and other things 
+        /// are done implicitly (eg: getting next value, because comments can be anywhere) depending on this value.
+        /// </br>
         /// </summary>
         public bool ignoreCapturedComments = true;
         protected bool _ThrowOnError = false;
@@ -211,11 +217,30 @@ namespace SJ
                 }
             }
         }
+        /// <summary>
+        /// Whether if the reader ended. If you want to validate end of JSON document,
+        /// you should do this if <see cref="ignoreCapturedComments"/> is <see langword="false"/>:
+        /// <c>
+        /// <br>while (!reader.End)</br>
+        /// <br>{</br>
+        /// <br>var value = reader.Read();</br>
+        /// <br>switch (value.type) ... processing code, if type is comment next "Read" must be called again to proceed ... </br>
+        /// <br>}</br>
+        /// </c>
+        /// <br/><br/>
+        /// This will also be marked <see langword="true"/> if <see cref="Error"/> exists.
+        /// </summary>
+        public bool Ended => !string.IsNullOrEmpty(Error) || current >= Length;
+
         public Stack<SJType> lastRecursableTypes;
         /// <summary>
-        /// State for checking colons in <see cref=""/>
+        /// State for checking colons in <see cref="SJType.Object"/>
         /// </summary>
         protected int _ColonsRequired = -1;
+        /// <summary>
+        /// State for checking commas in <see cref="SJType.Array"/>
+        /// </summary>
+        protected int _CommaRequired = -1;
 
         /// <summary>
         /// Length of the data to read.
@@ -244,7 +269,6 @@ namespace SJ
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected static string Tk(char c) => c == '\0' ? "\\0/0" : $"{c}/{(int)c}";
 
-        // CheckEOF should maybe "out" a Value or "ref" current Value.
         /// <summary>
         /// Validates and skips comment. This ignores the <see cref="allowComments"/> and parses the comment.
         /// <br><b>Note : </b> This method only skips and validates comments, if the character at <see cref="current"/> is '/'.
@@ -255,13 +279,20 @@ namespace SJ
         protected bool SkipComment()
         {
             (int start, int end) = GetCommentRange(true);
-            return start >= 0 && end >= 0;
+            if (start >= 0 && end >= 0)
+            {
+                current = end;
+                return true;
+            }
+
+            return false;
         }
         /// <summary>
         /// Read a range of comments, starting from <see cref="current"/> for the reader data.
         /// </summary>
+        /// <param name="setError">Set <see cref="Error"/> if the comment block is invalid.</param>
         /// <returns>Start and ending range. If the block isn't a comment, -1 is returned for both regions</returns>
-        protected (int start, int end) GetCommentRange(bool setError = true)
+        protected (int start, int end) GetCommentRange(bool setError)
         {
             int start = current, end = current;
             if (start < Length)
@@ -283,8 +314,11 @@ namespace SJ
 
                             ch = At(++end);
                         }
-
-                        // the whitespace '\n' will be implicitly skipped.
+                        // skip the '\n', '\r' or '\r\n'
+                        if (At(++end) == '\r' && (end + 1) < Length && At(end + 1) == '\n')
+                        {
+                            end++;
+                        }
                         return (start, end);
                     }
                     else if (next == '*')
@@ -304,7 +338,7 @@ namespace SJ
                             next = At(end + 1);
                         }
 
-                        // skip the '*/' (as those are actual non-ws chars)
+                        // skip the '*/'
                         end += 2;
                         return (start, end);
                     }
@@ -325,14 +359,15 @@ namespace SJ
             }
 
             // Nothing to skip, but not an "error"
-            return (start, end);
+            return (-1, -1);
         }
         /// <summary>
         /// Check remaining tokens after the JSON document is finished. (depth == 0)
         /// <br>Does parsing of comments if <see cref="allowComments"/></br>
         /// </summary>
         /// <returns>
-        /// <see langword="false"/> if the ending has invalid characters. <see langword="true"/> if the document ending is valid.
+        /// <see langword="false"/> if the ending has invalid characters. <see langword="true"/> if the document 
+        /// ending is valid. Note that for JSC without ignore comments, validating EOF is done explicitly and this method only skips whitespace.
         /// The <see cref="Error"/> value is assigned with relevant detail.
         /// </returns>
         protected bool CheckEOF()
@@ -349,9 +384,17 @@ namespace SJ
 
                 if (allowComments && ch == '/')
                 {
-                    if (!SkipComment())
+                    if (ignoreCapturedComments)
                     {
-                        Error = $"[end] {Error}";
+                        if (!SkipComment())
+                        {
+                            Error = $"[end] {Error}";
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        // Yield for parsing the comment line as current points to == '/', as it's "not EOF"
                         return false;
                     }
                 }
@@ -396,8 +439,13 @@ namespace SJ
             }
             if (current >= Length)
             {
-                Error = "Reached EOF";
-                goto _Top;
+                // Reaching end of file is no longer an error, but it should return an empty "end" value.
+                // Error = "Reached EOF";
+                // goto _Top;
+                result.type = SJType.End;
+                result.end = current;
+                result.depth = -1;
+                return result;
             }
             if (maxDepth > 0 && depth > maxDepth)
             {
@@ -413,29 +461,40 @@ namespace SJ
                 current++;
                 goto _Top;
             }
-            // Validate : Comments
+            // Validate / Parse : Comments
             else if (allowComments && ch == '/')
             {
                 // Perhaps I could have added a "SJType.Comment" Value, but the problems are :
                 // 1: Comments can be placed anywhere and are not "strictly structured"
-                // 2: Comments will require calling Read() (not a big problem) and doing while (!EOF) {} (is the bigger problem.
-                // the top "reading call stack" is popped without any "moving forward" and the chance for an error to be thrown)
-                // Though they aren't recursive, so that's a "bonus".
-                // I could add it later, requiring calling "Read" and yielding back when the SJType is Comment (also checking EOF?)
-                // To not break compatibility, I could add "ignoreComments = true" by default to skip comments while reading.
-                SkipComment(); // This sets Error
+                // 2: Comments will require calling Read() (not a big problem) and doing while (!reader.EOF) {}
+                //    (is the bigger problem for support. bandaid fix is to use ignoreCapturedComments to opt in to the new looping. however the new loop method _should_ support the old read.)
+                //    (future SJ update will make it better hopefully)
+                if (ignoreCapturedComments)
+                {
+                    SkipComment();
+                }
+                else
+                {
+                    result.type = SJType.Comment;
+                    (result.start, result.end) = GetCommentRange(true);
+                    if (string.IsNullOrEmpty(Error) && result.start >= 0 && result.end >= 0)
+                    {
+                        current = result.end;
+                        return result;
+                    }
+                }
                 goto _Top;
             }
             // Validate : Object == KV Colon, Array == Comma
             else if (ch == ':' || ch == ',')
             {
-                if (lastRecursableTypes.TryPeek(out SJType lastType))
+                if (lastRecursableTypes.TryPeek(out var lastType))
                 {
                     if (ch == ':')
                     {
-                        if (lastType == SJType.Array)
+                        if (lastType != SJType.Object)
                         {
-                            Error = "Unexpected ':' in array";
+                            Error = "Unexpected ':' in top level array";
                             goto _Top;
                         }
                         else if (_ColonsRequired == 0)
@@ -446,10 +505,27 @@ namespace SJ
 
                         _ColonsRequired = Math.Max(-1, _ColonsRequired - 1);
                     }
+                    else if (ch == ',')
+                    {
+                        // both Array and Object get commas
+                        if (_CommaRequired == 0)
+                        {
+                            Error = "Unexpected ',', exceeding required";
+                            goto _Top;
+                        }
+
+                        _CommaRequired = Math.Max(-1, _CommaRequired - 1);
+                    }
+                    else
+                    {
+                        // Unreachable
+                        Error = $"ch '{Tk(ch)}' was somehow mutated on comma/colon check and no longer pleases any condition";
+                        goto _Top;
+                    }
                 }
                 else
                 {
-                    Error = "Unexpected ':' or ',' in toplevel";
+                    Error = "Unexpected ':' or ',' in top level nothing";
                 }
 
                 current++;
@@ -457,7 +533,58 @@ namespace SJ
             }
             else if (_ColonsRequired > 0)
             {
+                // Colons are strict, they are seperator for key/value
                 Error = $"Unknown token '{Tk(ch)}', expected ':'";
+                goto _Top;
+            }
+            // Parse : Array | Object
+            else if (ch == '{' || ch == '[')
+            {
+                result.type = (ch == '{') ? SJType.Object : SJType.Array;
+                lastRecursableTypes.Push(result.type);
+                result.depth = ++depth;
+                ch = At(++current);
+
+                // If starting an object, comma is not expected
+                _CommaRequired = 0;
+            }
+            else if (ch == '}' || ch == ']')
+            {
+                result.type = SJType.End;
+                depth--;
+                SJType lastType = lastRecursableTypes.Pop();
+                if (depth < 0 || lastType != ((ch == '}') ? SJType.Object : SJType.Array))
+                {
+                    Error = (ch == '}') ? "Stray '}'" : "Stray ']'";
+                    goto _Top;
+                }
+                if (_CommaRequired == 0)
+                {
+                    Error = "Trailing comma character";
+                    goto _Top;
+                }
+
+                // Likely a comma is required for the next entry.
+                if (depth > 0)
+                {
+                    _CommaRequired = 1;
+                }
+
+                ch = At(++current);
+                result.end = current;
+
+                if (!CheckEOF())
+                {
+                    goto _Top;
+                }
+            }
+            // Validate: Commas
+            else if (_CommaRequired > 0)
+            {
+                // Commas are more flexible and can be found anywhere else,
+                // however they are not required for object declarations,
+                // but they are required for literals and object endings.
+                Error = $"Unknown token '{Tk(ch)}', expected ','";
                 goto _Top;
             }
             // Parse : Number
@@ -508,33 +635,7 @@ namespace SJ
                 }
                 return result;
             }
-            // Parse : Array | Object
-            else if (ch == '{' || ch == '[')
-            {
-                result.type = (ch == '{') ? SJType.Object : SJType.Array;
-                lastRecursableTypes.Push(result.type);
-                result.depth = ++depth;
-                ch = At(++current);
-            }
-            else if (ch == '}' || ch == ']')
-            {
-                result.type = SJType.End;
-                depth--;
-                SJType lastType = lastRecursableTypes.Pop();
-                if (depth < 0 || lastType != ((ch == '}') ? SJType.Object : SJType.Array))
-                {
-                    Error = (ch == '}') ? "Stray '}'" : "Stray ']'";
-                    goto _Top;
-                }
 
-                ch = At(++current);
-                result.end = current;
-
-                if (!CheckEOF())
-                {
-                    goto _Top;
-                }
-            }
             // Parse : null | true | false 
             else if (ch == 'n' || ch == 't' || ch == 'f')
             {
@@ -598,6 +699,11 @@ namespace SJ
             // ↓ if the array contains other recursive elements, this dives and goes back to the current array depth
             DiscardUntil(arrayValue.depth);
             result = Read();
+            if (result.type != SJType.Object && result.type != SJType.Array && result.type != SJType.Comment)
+            {
+                // Did not start an object/array, is simply the next value.
+                _CommaRequired = 1;
+            }
             return result.type != SJType.Error && result.type != SJType.End;
         }
         /// <summary>
@@ -611,12 +717,24 @@ namespace SJ
                 return false;
             }
 
+            // Haven't considered this, but if you start an object (K/V with state)
+            // and write a comment first, the key will be a comment.
+            // Since comments aren't to be ignored, they should also be
+            // checked in Object and skipped accordingly.
             DiscardUntil(objectValue.depth);
             key = Read();
             if (key.type == SJType.Error || key.type == SJType.End)
             {
                 value = Value.Error(this);
                 return false;
+            }
+            if (!ignoreCapturedComments && key.type == SJType.Comment)
+            {
+                // Yield again to call IterateObject.
+                // Comment is stored as "Key" or "Value"
+                // Array does not break, but it will ignore comma instead.
+                value = key;
+                return true;
             }
             if (key.type != SJType.String)
             {
@@ -627,16 +745,24 @@ namespace SJ
 
             _ColonsRequired = 1;
             value = Read();
+
             if (value.type == SJType.Error)
             {
                 return false;
             }
             if (value.type == SJType.End)
             {
-                Error = "Unexpected object end";
+                Error = "Unexpected object end, expected value";
                 return false;
             }
             _ColonsRequired = -1;
+            // Value needs comma afterwards, but SJType.End could end it.
+            // If SJType.End ends it, trailing comma could be "allowed" by not checking CommaRequired == 1 on "End"
+            if (value.type != SJType.Object && value.type != SJType.Array && value.type != SJType.Comment)
+            {
+                // Did not start an object/array, is simply the next value.
+                _CommaRequired = 1;
+            }
 
             return true;
         }
@@ -679,6 +805,7 @@ namespace SJ
         {
             current = 0;
             depth = 0;
+            _ColonsRequired = _CommaRequired = -1;
             Error = null;
             lastRecursableTypes?.Clear();
         }

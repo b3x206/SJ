@@ -8,7 +8,7 @@ This branch (`devel`) is where development is done, before getting packed into "
 
 **1:**
 
-This is still not a **"100% correct" parser**, what it does with the data (outside of the JSON tokens) ultimately depends on what you read from the parsed chunks.
+This is still not a **"100% correct" parser**, what it does with the data (outside of the JSON tokens) ultimately depends on what you read from the parsed chunks. (also some funny mistakes, but I write more and better tests to catch those now)
 
 **2:**
 
@@ -17,13 +17,20 @@ Because of
 * Improving "correctness"
 * And adding comment support.
 
-The code is more complicated. But I have taken the decision to make it simpler on `master`. Pushing here won't update `master` branch (yet), but I will do that sometime, where source is generated on push to `devel`..
+The code is more complicated. But I have taken the decision to make it simpler on `master`. Pushing here won't update `master` branch (yet), but I will do that sometime, where source is generated on push to `devel` for `master`..
+
+**3:**
+
+"Stable" SJ releases are the ones that are tagged with semver. <br>
+_(all tests pass, benchmarks are consistent or improved and it doesn't regress)_
 
 ## Examples
 
 ### Reader
+
 Use the [`SJStringReader`](./SJ/SJStringReader.cs) class to get started.
 
+### Actually no this is somewhat "deprecated", don't do this unless you know reader ignores comments
 ```cs
 // A basic object deserialization example. Non-recursive.
 using SJ;
@@ -33,6 +40,8 @@ using System.Globalization;
 
 static Vector3 ReadVector3(SJReader reader, SJReader.Value root)
 {
+    // The S in SJ stands for Spaghetti in this case
+    reader.ignoreCapturedComments = true; // do this thx
     Vector3 result = Vector3.Zero;
 
     // If the data schema is "known", you can just read like this:
@@ -57,6 +66,18 @@ SJReader.Value root = reader.Read();
 Console.WriteLine($"Saved Position : {ReadVector3(reader, root)}");
 ```
 
+
+If processing comments are desired, you should read the document like this (in fact, you should read most documents like this, unless you assert that comments are ignored):
+```cs
+using SJ;
+
+static void ReadCommentedData(SJReader reader, SJReader.Value root)
+{
+    // TODO pls !!
+}
+
+```
+
 ---
 
 Unlike the original SJ, there is also a string escaping implementation if desired:
@@ -79,6 +100,10 @@ switch (SJReader.Value.type)
 This is used as the default string escape for the Writer.
 
 ### Writer
+
+TODO (?) : Writer will also need `WriteComment` :) :) :) <br>
+But the basic usage will **not change**, great success! <br>
+
 Use the [`SJStringWriter`](SJ/SJStringWriter.cs) class to get started.
 
 ```cs
@@ -137,9 +162,10 @@ Reader (according to ReadLarge) provides a ~464 MB/s throughput.
 Writer (according to WriteLarge) provides a ~182 MB/s throughput.
 
 The allocations are caused by creating a [`Stack<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.stack-1?view=netstandard-2.1&devlangs=csharp) when the base SJ class is initialized. <br>
-**Note:** More allocations may occur depending on the size or strings you allocate while creating an object or while writing into a resizing buffer in memory. Also the `static readonly` initializations for some lambdas..
+**Note:** More allocations may occur depending on the size or strings you allocate while creating an object or while writing into a resizing buffer in memory. Also the `static readonly` initializations for some lambdas within classes, but those are done only once on the program's lifetime..
 
-Note that these are tested in the best case scenario, real life applications and usage will cause differences in speed.
+Note that these are tested in the best case scenario, real life applications and usage will cause differences in speed. <br>
+_Lack of performance_ could be caused by excessive bound checking for the Reader and the source the Writer writes into..
 
 ---
 

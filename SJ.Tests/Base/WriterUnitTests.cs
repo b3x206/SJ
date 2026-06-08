@@ -25,6 +25,51 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
         return false;
     }
 
+    private static readonly Type[] _ReadDataConsistencyExceptionTypes = [typeof(NotSupportedException), typeof(InvalidOperationException)];
+    /// <summary>
+    /// Exception types expected from your variety of Writer.
+    /// </summary>
+    public virtual Type[] ReadDataConsistencyExceptionTypes => _ReadDataConsistencyExceptionTypes;
+    [TestMethod]
+    public void TestReadDataConsistency()
+    {
+        var writer = CreateWriter();
+        try
+        {
+            writer.ThrowOnError = true;
+            // Buffered objects may struggle with converting representation to string.
+            using (writer.Object())
+            {
+                Assert.IsTrue(WriteTestValues(writer), "Writing must go without any errors");
+
+                using (writer.ArrayKV("test on le array"))
+                {
+                    Assert.IsTrue(WriteTestValues(writer), "Writing must go without any errors");
+                }
+            }
+
+            if (!writer.CanReadData)
+            {
+                try
+                {
+                    writer.ReadData();
+                }
+                catch (Exception ex) when (Enumerable.Contains(ReadDataConsistencyExceptionTypes, ex.GetType()))
+                {
+                    Console.WriteLine($"Caught false CanReadData exception '{ex}'");
+                }
+            }
+            else
+            {
+                // Reading written data must equal written count
+                Assert.AreEqual(writer.count, writer.ReadData().Length);
+            }
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
     [TestMethod]
     public void TestRootWrite()
     {
@@ -89,7 +134,6 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
         try
         {
             writer.ThrowOnError = true;
-
             writer.WriteString(TestData.DataEmojiSpam);
             if (!writer.CanReadData)
             {
@@ -98,46 +142,6 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
 
             // Buffered writers must truncate and write this correctly
             Assert.AreEqual(writer.ReadData(), $"\"{TestData.DataEmojiSpam}\"");
-        }
-        finally
-        {
-            DisposeWriter(writer);
-        }
-    }
-
-    private static readonly Type[] _ReadDataConsistencyExceptionTypes = [typeof(NotSupportedException), typeof(InvalidOperationException)];
-    /// <summary>
-    /// Exception types expected from your variety of Writer.
-    /// </summary>
-    public virtual Type[] ReadDataConsistencyExceptionTypes => _ReadDataConsistencyExceptionTypes;
-    [TestMethod]
-    public void TestReadDataConsistency()
-    {
-        var writer = CreateWriter();
-        try
-        {
-            writer.ThrowOnError = true;
-            using (writer.Object())
-            {
-                writer.WriteKV("hello", "world");
-            }
-
-            if (!writer.CanReadData)
-            {
-                try
-                {
-                    writer.ReadData();
-                }
-                catch (Exception ex) when (Enumerable.Contains(ReadDataConsistencyExceptionTypes, ex.GetType()))
-                {
-                    Console.WriteLine($"Caught exception '{ex}'");
-                }
-            }
-            else
-            {
-                // Reading written data must equal written count
-                Assert.AreEqual(writer.count, writer.ReadData().Length);
-            }
         }
         finally
         {

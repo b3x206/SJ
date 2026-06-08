@@ -15,9 +15,6 @@ public static class WriterTester
         int startingIndex = writer.Top.index;
         void CheckWriterIndex() => Assert.AreEqual(++startingIndex, writer.Top.index, "Expected write to increase top level element counter index");
 
-        // golang core :
-        // (the more I read on rust, more I realize I should make errors handled with a selection of methods and return a "result struct")
-        // and call the methods that return bool "try"
         bool success = string.IsNullOrEmpty(writer.Error);
         switch (writer.Top.type)
         {
@@ -161,7 +158,7 @@ public static class WriterTester
         {
             if (!writer.CanReadData)
             {
-                Assert.Inconclusive($"[!] Cannot TestRootWith on writer type '{writer.GetType().AssemblyQualifiedName}' as data can't be read.");
+                Assert.Inconclusive($"[!] Cannot TestRootWith on writer type '{writer.GetType().AssemblyQualifiedName}' as data can't be read. Comparison was for '{s}'");
             }
 
             Assert.AreEqual(s, writer.ReadData());

@@ -1,5 +1,7 @@
 ﻿using static SJ.Tests.TestData;
 using static SJ.Tests.ReaderTester;
+using System.Text;
+using System.Reflection;
 
 namespace SJ.Tests;
 
@@ -9,15 +11,44 @@ namespace SJ.Tests;
 /// <typeparam name="TReader">Type for the target <see cref="SJReader"/></typeparam>
 public abstract class ReaderUnitTests<TReader> where TReader : SJReader
 {
+    // uh oh:
+    // * https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices#avoid-coding-logic-in-unit-tests
+    // anyways, "it works"(tm). if only the data attributes could have been extended better.
+
     // Config
+    public const int SmallTestTimeout = 1000, MidTestTimeout = 5000, LargeTestTimeout = 30000;
     /// <summary>
     /// Create <typeparamref name="TReader"/> with the data for <paramref name="data"/>.
     /// </summary>
     public abstract TReader CreateWithString(string data);
     /// <summary>
+    /// Create <typeparamref name="TReader"/> with encoded data, if encoding related matters are to be tested. (for StringReader, this just tests the System libraries, but it will make sense for buffered readers)
+    /// </summary>
+    /// <param name="data">
+    /// Data stream, can be created by a stream or something else.
+    /// The stream can be disposed by this method if the <typeparamref name="TReader"/> does not rely on it.
+    /// </param>
+    /// <param name="enc">Encoding of the stream, if applicable.</param>
+    public abstract TReader CreateWithStream(Stream data, Encoding? enc);
+    /// <summary>
     /// Create <typeparamref name="TReader"/> with the file data located at <paramref name="path"/>.
     /// </summary>
-    public abstract TReader CreateWithFile(string path);
+    public virtual TReader CreateWithFile(string path)
+    {
+        Assert.IsTrue(File.Exists(path), $"File must exist in path '{path}'");
+        var fs = File.OpenRead(path);
+        return CreateWithStream(fs, null);
+    }
+    /// <summary>
+    /// Re-encodes <paramref name="data"/> to a stream and feeds it into <see cref="CreateWithStream(Stream)"/>.
+    /// </summary>
+    /// <param name="data">Data to create from.</param>
+    /// <param name="enc">Encoding to mutilate <paramref name="data"/>'s bits.</param>
+    public virtual TReader CreateWithEncodedString(string data, Encoding enc)
+    {
+        var ms = new MemoryStream(enc.GetBytes(data));
+        return CreateWithStream(ms, enc);
+    }
     /// <summary>
     /// Create a string that will exceed <paramref name="maxDepth"/>.
     /// </summary>
@@ -40,35 +71,78 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     /// Depth of property used on "MaxNRecursion". Override if your class initializes this property differently on a constructor.
     /// </summary>
     public virtual int MaxRecursionDepth => 128;
+    /// <summary>
+    /// Processors for the encoding parameter in the tests.
+    /// </summary>
+    public static IEnumerable<object[]> EncodedStringProcessors =>
+        [[Encoding.UTF8], [Encoding.Unicode], [Encoding.BigEndianUnicode], [Encoding.UTF32]];
+    public static string GetEncodedTestName(MethodInfo info, object[] data)
+    {
+        var data0 = data[0];
+        if (ReferenceEquals(data0, Encoding.Unicode))
+        {
+            return $"{info.Name}_UnicodeEncoding";
+        }
+        if (ReferenceEquals(data0, Encoding.BigEndianUnicode))
+        {
+            return $"{info.Name}_BigEndianUnicodeEncoding";
+        }
+        return $"{info.Name}_{data0}";
+    }
+    /// <summary>
+    /// Collection of root data (that are either empty or not)
+    /// </summary>
+    public static IEnumerable<object[]> JsonRootDataProcessors => [[JsonDataEmptyObject], [JsonDataEmptyArray], [JsonDataRootString], [JsonDataRootNumber], [JsonDataRootBool], [JsonDataRootNull]];
+    public static string GetRootDataProcessorTestName(MethodInfo info, object[] data) => $"{info.Name}_{data[0]}";
 
     // Tests
     // Basic tests: Read and Empty
     [TestMethod]
+    [Timeout(SmallTestTimeout)]
     public void TestBasic() => Read(CreateWithString(JsonData1));
     [TestMethod]
     [ExpectedException(typeof(SJReader.ReadException))]
+    [Timeout(SmallTestTimeout)]
     public void TestBasicInvalid() => Read(CreateWithString(JsonDataInvalid));
     [TestMethod]
+    [Timeout(SmallTestTimeout)]
     public void TestSlightlyComplicated() => Read(CreateWithString(JsonData2));
+    // Emoji spams will get differently encoded strings
     [TestMethod]
-    public void TestEmojiSpam()
+    [Timeout(MidTestTimeout)]
+    [DynamicData(nameof(EncodedStringProcessors), DynamicDataDisplayName = nameof(GetEncodedTestName))]
+    public void TestEmojiSpam(Encoding enc)
     {
-        var reader = CreateWithString(JsonData3);
+        var reader = CreateWithEncodedString(JsonData3, enc);
         var root = reader.Read();
-        Assert.AreEqual(root.type, SJType.Object, $"Expected root to be object, it is instead this : {root}");
+        Assert.AreEqual(SJType.Object, root.type, $"Expected root to be object, it is instead this : {root}");
         while (reader.IterateObject(root, out var k, out var v))
         {
             Assert.AreEqual(new string(k.Slice()), JsonDataSpamKey, "Keys must be equal");
-            Assert.AreEqual(k.type, SJType.String);
+            Assert.AreEqual(SJType.String, k.type);
             Assert.AreEqual(new string(v.Slice()), JsonDataSpamValue, "Values must be equal");
-            Assert.AreEqual(v.type, SJType.String);
+            Assert.AreEqual(SJType.String, v.type);
         }
     }
     [TestMethod]
-    public void TestEmojiSpamLiteral()
+    [Timeout(MidTestTimeout)]
+    [DynamicData(nameof(EncodedStringProcessors), DynamicDataDisplayName = nameof(GetEncodedTestName))]
+    public void TestEmojiSpamLiteral(Encoding enc)
     {
-
+        // Buffered readers can struggle with this with invalidly truncated read from the resources with other encodings.
+        var reader = CreateWithEncodedString($"\"{DataEmojiSpam}\"", enc);
+        var root = reader.Read();
+        Assert.AreEqual(SJType.String, root.type);
+        Assert.IsTrue(root.Slice().SequenceEqual(DataEmojiSpam), "Sliced value must equal the string inside the literal.");
     }
+
+    [TestMethod]
+    [Timeout(SmallTestTimeout)]
+    [DataRow(@"[""hello"" 1 2 3 4 5]")]
+    [DataRow(@"{""hello"": 124 ""world!"": ""world: yo"" ""look"": ""no comma! waow bradar please JSON code make no mistakes""}")]
+    [DataRow(@"{""hello"" 124, ""gurt"" ""yo"", ""yogurt"" ""yes""}")]
+    [ExpectedException(typeof(SJReader.ReadException))]
+    public void TestCommaColonState(string data) => Read(CreateWithString(data));
 
     // Discarding
     protected static void TestDiscard(SJReader reader, string discardKey = JsonDataDiscardKey)
@@ -110,43 +184,70 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
         }
     }
     [TestMethod]
+    [Timeout(SmallTestTimeout)]
     public void TestDiscard() => TestDiscard(CreateWithString(JsonDataDiscard));
     [TestMethod]
+    [Timeout(SmallTestTimeout)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestDiscardInvalid() => TestDiscard(CreateWithString(JsonDataDiscardInvalid));
 
     // JSC
     [TestMethod]
+    [Timeout(SmallTestTimeout)]
     public void TestJSC() => ReadJSC(CreateWithString(JsonDataComment));
     [TestMethod]
+    [Timeout(SmallTestTimeout)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestJSCInvalid() => ReadJSC(CreateWithString(JsonDataCommentInvalid));
 
+    // JSC with Capture
+    [TestMethod]
+    [Timeout(SmallTestTimeout)]
+    public void TestJSCWithCapture() => ReadJSC(CreateWithString(JsonDataComment), false);
+    [TestMethod]
+    [Timeout(SmallTestTimeout)]
+    [ExpectedException(typeof(SJReader.ReadException))]
+    public void TestJSCInvalidWithCapture() => ReadJSC(CreateWithString(JsonDataInvalid), false);
+    // Do also read literals with no ignore JSC to test "Ended".
+    [TestMethod]
+    [Timeout(SmallTestTimeout)]
+    [DynamicData(nameof(JsonRootDataProcessors), DynamicDataDisplayName = nameof(GetRootDataProcessorTestName))]
+    public void TestJSCRootLiteralsWithCapture(string data)
+    {
+        // Micro$oft pls
+        string CommentLeft = "// This is a comment!" + Environment.NewLine;
+        string CommentRight = " // One more comment!" + Environment.NewLine + "/* Is it the end of file? */" + Environment.NewLine;
+
+        Assert.AreEqual(data, ReadJSC(CreateWithString(data), false).ToString());
+        // To spice it up, surround root data with comments on second iter.
+        var data2 = $"{CommentLeft}{data}{CommentRight}";
+        Assert.AreEqual(data2, ReadJSC(CreateWithString(data2), false).ToString());
+    }
+
     // Empty root
     [TestMethod]
-    public void TestEmptyValues()
+    [DynamicData(nameof(JsonRootDataProcessors), DynamicDataDisplayName = nameof(GetRootDataProcessorTestName))]
+    public void TestRootLiterals(string data)
     {
-        string[] datas = [JsonDataEmptyObject, JsonDataEmptyArray, JsonDataRootString, JsonDataRootNumber, JsonDataRootBool, JsonDataRootNull];
-        for (int i = 0; i < datas.Length; i++)
-        {
-            string data = datas[i];
-            
-            // Since the empty builder for the sample code is simple but somewhat matching, it should equal.
-            Assert.AreEqual(data, Read(CreateWithString(data)).ToString());
-        }
+        // Since the empty builder for the sample code is simple but somewhat matching, it should equal.
+        Assert.AreEqual(data, Read(CreateWithString(data)).ToString());
     }
     [TestMethod]
+    [Timeout(SmallTestTimeout)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestEmptyString() => Read(CreateWithString(DataEmpty));
 
     // Stack
     [TestMethod]
+    [Timeout(SmallTestTimeout)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestStacking() => Read(CreateWithString(JsonDataStackingInvalid));
     [TestMethod]
+    [Timeout(SmallTestTimeout)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestMaxArrayRecursion() => Read((CreateWithMaxRecursionString("[]", MaxRecursionDepth)));
     [TestMethod]
+    [Timeout(SmallTestTimeout)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestMaxObjectRecursion() => Read(CreateWithMaxRecursionString("{}", MaxRecursionDepth));
 
@@ -155,24 +256,28 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     /// Tests reading a basic JSON file (100kb-ish).
     /// </summary>
     [TestMethod]
+    [Timeout(MidTestTimeout)]
     public void TestFile() => Read(CreateWithFile(JsonFileValidName));
     /// <summary>
     /// Tests reading large JSON file.
     /// </summary>
     [TestMethod]
-    [Timeout(30000)] // ← Change this if your PC is slower, but it's unlikely you will need this.
+    [Timeout(LargeTestTimeout)]
     public void TestVeryLarge()
     {
         Read(CreateWithFile(JsonFileLargeName));
         Read(CreateWithFile(JsonFileLargeMinName));
     }
     [TestMethod]
+    [Timeout(MidTestTimeout)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestInvalidUnterminated() => Read(CreateWithFile(JsonFileInvalidUnterminated));
     [TestMethod]
+    [Timeout(MidTestTimeout)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestInvalidNoColon() => Read(CreateWithFile(JsonFileInvalidNoColon));
     [TestMethod]
+    [Timeout(MidTestTimeout)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestInvalidBinary() => Read(CreateWithFile(JsonFileInvalidBinary));
 }

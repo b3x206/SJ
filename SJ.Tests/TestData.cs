@@ -88,7 +88,7 @@ public static class TestData
     ""key"": { ""another key"": [{]}, ]
 }";
 
-    public const string JsonDataComment = @"/* Let's start our invalid JSON journey! */
+    public const string JsonDataComment = @"/* Let's start our ""invalid"" JSON journey! */
 // Also some more lines.
 {
         // I like annotating my JSON, but it gets deleted when it's serialized :(

@@ -27,17 +27,19 @@ namespace SJ
     ///     public override void Append(char c) => data.Write(c);
     ///     public override void Append(ReadOnlySpan<char> s) => data.Write(s);
     /// 
+    ///     public override bool CanReadData => true;
+    ///     public override string ReadData()
+    ///     {
+    ///         // Convert the resulting data to string. Called if necessary
+    ///         // (generally with test code or with in-memory resources.)
+    ///         // Could be unnecessary on things like Stream- based writers. Default impl is not supported.
+    ///         return data.ToString();
+    ///     }
+    ///
     ///     public override void Reset()
     ///     {
     ///         base.Reset();
     ///         data.Clear(); // Or reset the position to start and truncate remaining data.
-    ///     }
-    ///     public override bool CanReadData => true;
-    ///     public override string ReadData()
-    ///     {
-    ///         // Convert the resulting data to string. Called if necessary.
-    ///         // Could be unnecessary on things like Stream- based writers
-    ///         return data.ToString();
     ///     }
     /// }
     /// ]]>
@@ -47,10 +49,11 @@ namespace SJ
         // A span based writer would be nice, but then I have to pass it
         // into the method instead of having the span stored inside the writer.
         // I could create a "SJSpanWriter" that does "the same behaviour",
-        // but it's repeated code. So let's be "heap only" for the time being.
+        // but it's repeated code. So let's be "heap only" for the time being,
+        // until the library becomes more stable. Or it's "BXSave" territory (leaning towards the latter)
+        // ---
 
-        // Unity does not support System.Range
-#pragma warning disable IDE0057
+#pragma warning disable IDE0057 // Unity does not support System.Range
 
         /// <summary>
         /// Exception thrown on an error case while reading JSON.
@@ -788,7 +791,7 @@ namespace SJ
         /// <summary>
         /// Shows a simple preview of the current state.
         /// </summary>
-        public override string ToString() => $"[SJWriter] count={count}, error={Error}, top={{{Top}}}";
+        public override string ToString() => $"[{base.ToString()}] count={count}, error={Error}, top={{{Top}}}";
 
         public virtual void Reset()
         {
@@ -798,6 +801,7 @@ namespace SJ
             Error = null;
             writeStack.Clear();
         }
-#pragma warning restore IDE0057
+
+#pragma warning restore IDE0057 // Unity does not support System.Range
     }
 }
