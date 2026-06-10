@@ -2,6 +2,7 @@
 using static SJ.Tests.ReaderTester;
 using System.Text;
 using System.Reflection;
+using System.Xml.Linq;
 
 namespace SJ.Tests;
 
@@ -28,16 +29,7 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     /// The stream can be disposed by this method if the <typeparamref name="TReader"/> does not rely on it.
     /// </param>
     /// <param name="enc">Encoding of the stream, if applicable.</param>
-    public abstract TReader CreateWithStream(Stream data, Encoding? enc);
-    /// <summary>
-    /// Create <typeparamref name="TReader"/> with the file data located at <paramref name="path"/>.
-    /// </summary>
-    public virtual TReader CreateWithFile(string path)
-    {
-        Assert.IsTrue(File.Exists(path), $"File must exist in path '{path}'");
-        var fs = File.OpenRead(path);
-        return CreateWithStream(fs, null);
-    }
+    public abstract TReader CreateFromStream(Stream data, Encoding? enc);
     /// <summary>
     /// Re-encodes <paramref name="data"/> to a stream and feeds it into <see cref="CreateWithStream(Stream)"/>.
     /// </summary>
@@ -46,7 +38,7 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     public virtual TReader CreateWithEncodedString(string data, Encoding enc)
     {
         var ms = new MemoryStream(enc.GetBytes(data));
-        return CreateWithStream(ms, enc);
+        return CreateFromStream(ms, enc);
     }
     /// <summary>
     /// Create a string that will exceed <paramref name="maxDepth"/>.
@@ -258,7 +250,7 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     }
     [TestMethod]
     [Timeout(TestTimeout.Short)]
-    [ExpectedException(typeof(SJReader.ReadException))]
+    // No longer throws.
     public void TestEmptyString() => Read(CreateWithString(DataEmpty));
 
     // Stack
@@ -276,32 +268,27 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     public void TestMaxObjectRecursion() => Read(CreateWithMaxRecursionString("{}", MaxRecursionDepth));
 
     // - File tests
+    public virtual Encoding JsonFileEncoding => Encoding.UTF8;
     /// <summary>
     /// Tests reading a basic JSON file (100kb-ish).
     /// </summary>
     [TestMethod]
     [Timeout(TestTimeout.Mid)]
-    public void TestFile() => Read(CreateWithFile(JsonFileValidName));
+    [DataRow(JsonFileValidName)]
+    public void TestFile(string name) => Read(CreateFromStream(LoadAsmFile(name), JsonFileEncoding));
     /// <summary>
     /// Tests reading large JSON file.
     /// </summary>
     [TestMethod]
     [Timeout(TestTimeout.Long)]
-    public void TestVeryLarge()
-    {
-        Read(CreateWithFile(JsonFileLargeName));
-        Read(CreateWithFile(JsonFileLargeMinName));
-    }
+    [DataRow(JsonFileLargeName)]
+    [DataRow(JsonFileLargeMinName)]
+    public void TestVeryLarge(string name) => Read(CreateFromStream(LoadAsmFile(name), JsonFileEncoding));
     [TestMethod]
     [Timeout(TestTimeout.Mid)]
+    [DataRow(JsonFileInvalidBinary)]
+    [DataRow(JsonFileInvalidNoColon)]
+    [DataRow(JsonFileInvalidUnterminated)]
     [ExpectedException(typeof(SJReader.ReadException))]
-    public void TestInvalidUnterminated() => Read(CreateWithFile(JsonFileInvalidUnterminated));
-    [TestMethod]
-    [Timeout(TestTimeout.Mid)]
-    [ExpectedException(typeof(SJReader.ReadException))]
-    public void TestInvalidNoColon() => Read(CreateWithFile(JsonFileInvalidNoColon));
-    [TestMethod]
-    [Timeout(TestTimeout.Mid)]
-    [ExpectedException(typeof(SJReader.ReadException))]
-    public void TestInvalidBinary() => Read(CreateWithFile(JsonFileInvalidBinary));
+    public void TestInvalidFile(string name) => Read(CreateFromStream(LoadAsmFile(name), JsonFileEncoding));
 }

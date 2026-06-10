@@ -6,7 +6,7 @@ namespace SJ.Tests.Impl;
 public sealed class StringReaderUnitTests : ReaderUnitTests<SJStringReader>
 {
     public override SJStringReader CreateWithString(string data) => new(data);
-    public override SJStringReader CreateWithStream(Stream data, Encoding? enc)
+    public override SJStringReader CreateFromStream(Stream data, Encoding? enc)
     {
         ArgumentNullException.ThrowIfNull(data);
         // This just reads the text using the STL.
@@ -16,10 +16,5 @@ public sealed class StringReaderUnitTests : ReaderUnitTests<SJStringReader>
         // Could write the preamble, but meh.
         using var sr = enc is not null ? new StreamReader(data, enc) : new StreamReader(data);
         return new(sr.ReadToEnd());
-    }
-    public override SJStringReader CreateWithFile(string path)
-    {
-        Assert.IsTrue(File.Exists(path), $"File must exist on path '{path}'");
-        return new(File.ReadAllText(path));
     }
 }

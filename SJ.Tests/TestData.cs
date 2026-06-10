@@ -1,4 +1,6 @@
-﻿namespace SJ.Tests;
+﻿using System.Text;
+
+namespace SJ.Tests;
 
 /// <summary>
 /// Contains JSON data to test against.
@@ -116,14 +118,21 @@ public static class TestData
     // - File Data
     // * "valid.json" is from some random website.
     // * JSON data sets are from https://microsoftedge.github.io/Demos/json-dummy-data/
-    // * TODO : Embed these into the assembly, not needing any file system
-    public static readonly string BaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-    public static readonly string JsonFileValidName = Path.Combine(BaseDirectory, "TestFiles", "valid.json"),
-        JsonFileLargeName = Path.Combine(BaseDirectory, "TestFiles", "5mb.json"),
-        JsonFileLargeMinName = Path.Combine(BaseDirectory, "TestFiles", "5mb.min.json"),
-        JsonFileInvalidUnterminated = Path.Combine(BaseDirectory, "TestFiles", "unterminated.json"),
-        JsonFileInvalidNoColon = Path.Combine(BaseDirectory, "TestFiles", "missing_colon.json"),
-        JsonFileInvalidBinary = Path.Combine(BaseDirectory, "TestFiles", "binary.json");
+    // * These must be loaded from assembly now
+    public  const string JsonFileValidName = "valid.json",
+        JsonFileLargeName = "5mb.json",
+        JsonFileLargeMinName = "5mb.min.json",
+        JsonFileInvalidUnterminated = "unterminated.json",
+        JsonFileInvalidNoColon = "missing_colon.json",
+        JsonFileInvalidBinary = "binary.json";
+    public static Stream LoadAsmFile(string jsonFile)
+    {
+        var asm = typeof(TestData).Assembly;
+        var stream = asm.GetManifestResourceStream(jsonFile);
+        Assert.IsNotNull(stream, $"Failed to load embedded JSON file stream from assembly with name '{jsonFile}'");
+
+        return stream;
+    }
 
     // - Escape Data
     public const string EscapeContent = "Quote: \", Backslash: \\, Tab: \t, Newline: \n, Pizza: \uD83C\uDF55, The 🅱 variant: \uD83C\uDD71\uFE0F";
