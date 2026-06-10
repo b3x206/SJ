@@ -10,7 +10,7 @@ public static class TestData
     // JSON Data
     // - Root Data
     public const string JsonDataEmptyObject = @"{}", JsonDataEmptyArray = @"[]", JsonDataRootString = @"""Hello world!""",
-        JsonDataRootNumber = @"42.42", JsonDataRootBool = @"false", JsonDataRootNull = @"null", DataEmpty = "";
+        JsonDataRootNumber = @"42.42", JsonDataRootBoolFalse = @"false", JsonDataRootBoolTrue = @"true", JsonDataRootNull = @"null", DataEmpty = "";
 
     public const string JsonData1 = @"{
         ""foo"": [""bar"", ""baz""],

@@ -16,7 +16,7 @@ public static class ReaderTester
             case SJType.Error:
                 {
                     // Should be able to quit the loop. Note that Ended will also be marked on a case of error.
-                    Console.WriteLine($"Error Value: {root}, Ended:{reader.Ended}, Error: '{reader.Error}'");
+                    Console.WriteLine($"Error Value: {root}, Ended:{reader.ended}, Error: '{reader.Error}'");
                     reader.ThrowError();
                     return;
                 }
@@ -24,7 +24,7 @@ public static class ReaderTester
                 {
                     // End is no longer an error, but it necessarily isn't the actual file ending.
                     // Something distinct to actual "end" is that the depth is set negative though.
-                    if (reader.Ended)
+                    if (reader.ended)
                     {
                         Assert.IsTrue(root.objectDepth <= 0, "Depth must be zero if ended");
                     }
@@ -128,11 +128,9 @@ public static class ReaderTester
         try
         {
             sb.Clear();
-            var root = reader.Read();
-            while (!reader.Ended)
+            for (var root = reader.Read(); !reader.ended; root = reader.Read())
             {
                 ReadInner(sb, reader, root);
-                root = reader.Read();
             }
         }
         finally
@@ -158,11 +156,9 @@ public static class ReaderTester
             sb.Clear();
             reader.allowComments = true;
             reader.ignoreCapturedComments = ignoreComments;
-            var root = reader.Read();
-            while (!reader.Ended)
+            for (var root = reader.Read(); !reader.ended; root = reader.Read())
             {
                 ReadInner(sb, reader, root);
-                root = reader.Read();
             }
         }
         finally

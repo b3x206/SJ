@@ -266,6 +266,18 @@ namespace SJ
             if (!HasState) throw new InvalidOperationException("Cannot peek state while there is no state.");
             return ref _stateStack[--depth];
         }
+        /// <summary>
+        /// Whether if the reader reached end. If you want to validate end of JSON document,
+        /// you should do this if <see cref="ignoreCapturedComments"/> is <see langword="false"/>:
+        /// <c>
+        /// <br>for (var value = reader.Read(); !reader.Ended; value = reader.Read())</br>
+        /// <br>{</br>
+        /// <br>switch (value.type) // ... processing code, if type is comment next "Read" must be called again to proceed ... </br>
+        /// <br>// Also, errors must be handled correctly. If <see cref="Read"/> is called while in error state, this field won't be touched.</br>
+        /// <br>}</br>
+        /// </c>
+        /// </summary>
+        public bool ended;
 
         /// <summary>
         /// Last key read on a object key/value pair. If an <see cref="EntryType.Value"/> 
@@ -294,22 +306,6 @@ namespace SJ
                 }
             }
         }
-
-        public bool _Ended;
-        /// <summary>
-        /// Whether if the reader ended. If you want to validate end of JSON document,
-        /// you should do this if <see cref="ignoreCapturedComments"/> is <see langword="false"/>:
-        /// <c>
-        /// <br>while (!reader.End)</br>
-        /// <br>{</br>
-        /// <br>var value = reader.Read();</br>
-        /// <br>switch (value.type) ... processing code, if type is comment next "Read" must be called again to proceed ... </br>
-        /// <br>}</br>
-        /// </c>
-        /// <br/><br/>
-        /// This will also be marked <see langword="true"/> if <see cref="Error"/> exists.
-        /// </summary>
-        public bool Ended { get => !string.IsNullOrEmpty(Error) || _Ended; set => _Ended = value; }
 
         /// <summary>
         /// Length of the data to read.
@@ -562,6 +558,7 @@ namespace SJ
         public virtual Value Read()
         {
             var result = new Value(this);
+            ended = !string.IsNullOrEmpty(Error);
         _Top:
             if (!string.IsNullOrEmpty(Error))
             {
@@ -581,7 +578,7 @@ namespace SJ
                 result.type = SJType.Error;
                 result.start = result.end = current;
                 result.objectDepth = -1;
-                Ended = true;
+                ended = true;
                 return result;
             }
             if (maxDepth > 0 && depth > maxDepth)
@@ -771,22 +768,22 @@ namespace SJ
             else if (ch == 'n' || ch == 't' || ch == 'f')
             {
                 result.type = (ch == 'n') ? SJType.Null : SJType.Bool;
-
-                if (Slice(current, 4).Equals("null", StringComparison.Ordinal))
+                int remaining = Length - current;
+                if (Slice(current, Math.Min(remaining, 4)).Equals("null", StringComparison.Ordinal))
                 {
                     current += 4;
                 }
-                else if (Slice(current, 5).Equals("false", StringComparison.Ordinal))
+                else if (Slice(current, Math.Min(remaining, 4)).Equals("true", StringComparison.Ordinal))
+                {
+                    current += 4;
+                }
+                else if (Slice(current, Math.Min(remaining, 5)).Equals("false", StringComparison.Ordinal))
                 {
                     current += 5;
                 }
-                else if (Slice(current, 4).Equals("true", StringComparison.Ordinal))
-                {
-                    current += 4;
-                }
                 else
                 {
-                    Error = $"Unknown token '{Tk(ch)}'";
+                    Error = $"Unknown token '{Tk(ch)}' or truncated literal";
                     goto _Top;
                 }
                 result.end = current;
@@ -811,7 +808,7 @@ namespace SJ
         protected void DiscardUntil(int depth)
         {
             var value = Value.Null();
-            while (!Ended && this.depth != depth && value.type != SJType.Error)
+            while (!ended && this.depth != depth && value.type != SJType.Error)
             {
                 value = Read();
             }
@@ -988,7 +985,7 @@ namespace SJ
             current = depth = 0;
             LastEntryKey = default;
             Error = null;
-            Ended = false;
+            ended = false;
         }
 
         public override string ToString()

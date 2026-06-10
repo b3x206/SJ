@@ -15,6 +15,7 @@ namespace SJ.Examples
                         reader.Location(out int l, out int c);
                         Console.WriteLine($"ReadInner: Error '{reader.Error}' at 'line={l}, column={c}'");
                         // ^ This will output multiple times, you can add a global flag if that is undesired.
+                        // Or you can throw like : reader.ThrowError();
                         break;
                     }
 
@@ -60,6 +61,7 @@ namespace SJ.Examples
                         }
                         break;
                     }
+                case SJType.Key:
                 case SJType.String:
                     {
                         // If unescaping the string is desired, you can use SJEscape.Unescape(string)
@@ -76,7 +78,7 @@ namespace SJ.Examples
             }
         }
 
-        static void Main(string[] args)
+        public static void TMain(string[] args)
         {
             string data = args.Length > 1 ? args[1] : 
                 "{ \"foo\": [\"bar\", \"baz\"], \"idk\": 42, \"mango\": { \"6\": 7 } }";

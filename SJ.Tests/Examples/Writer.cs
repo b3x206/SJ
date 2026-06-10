@@ -2,9 +2,9 @@
 
 namespace SJ.Examples
 {
-    internal sealed class Writer
+    sealed class Writer
     {
-        static void Main(string[] args)
+        public static void TMain(string[] args)
         {
             var writer = new SJStringWriter()
             {
@@ -39,7 +39,10 @@ namespace SJ.Examples
                 writer.Write(5);
             } // writer.EndArray();
               // ↑ The array will end automatically once you go out of using scope.
+            Console.WriteLine($"Result Array : {writer.ReadData()}");
 
+            // To not throw here, reset before writing another root level object..
+            writer.Reset();
             using (writer.Object()) // Or writer.BeginObject();
             {
                 // You must write key the following way:
@@ -80,8 +83,8 @@ namespace SJ.Examples
             } // writer.EndObject();
               // ↑ The object will end automatically once you go out of using scope.
 
-            // Output the resulting JSON like this: (ToString)
-            Console.WriteLine($"Result Object : {writer}");
+            // Output the resulting JSON like this: (ReadData)
+            Console.WriteLine($"Result Object : {writer.ReadData()}");
         }
     }
 }

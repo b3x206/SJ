@@ -2,7 +2,6 @@
 using static SJ.Tests.ReaderTester;
 using System.Text;
 using System.Reflection;
-using System.Xml.Linq;
 
 namespace SJ.Tests;
 
@@ -74,7 +73,7 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     /// <summary>
     /// Processors for the encoding parameter in the tests.
     /// </summary>
-    public static IEnumerable<object[]> EncodedStringProcessors =>
+    public static IEnumerable<Encoding[]> EncodedStringProcessors =>
         [[Encoding.UTF8], [Encoding.Unicode], [Encoding.BigEndianUnicode], [Encoding.UTF32]];
     public static string GetEncodedTestName(MethodInfo info, object[] data)
     {
@@ -92,8 +91,31 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     /// <summary>
     /// Collection of root data (that are either empty or not)
     /// </summary>
-    public static IEnumerable<object[]> JsonRootDataProcessors => [[JsonDataEmptyObject], [JsonDataEmptyArray], [JsonDataRootString], [JsonDataRootNumber], [JsonDataRootBool], [JsonDataRootNull]];
-    public static string GetRootDataProcessorTestName(MethodInfo info, object[] data) => $"{info.Name}_{data[0]}";
+    public static IEnumerable<string[]> JsonRootDataProcessors => [[JsonDataEmptyObject], [JsonDataEmptyArray], [JsonDataRootString], [JsonDataRootNumber], [JsonDataRootBoolFalse], [JsonDataRootBoolTrue], [JsonDataRootNull]];
+    public static IEnumerable<string[]> JsonTruncatedRootDataProcessors()
+    {
+        foreach (var args in JsonRootDataProcessors)
+        {
+            // The number can be "safely truncated" and is loosely enforced. Skip that explicitly.
+            // Note that this will break if multiple number args are given. But ehh... Whatever
+            if (args.Length <= 0) continue;
+            if (args.Length == 1 && args[0] == JsonDataRootNumber) continue;
+
+            string[] truncArgs = new string[args.Length];
+            int maxLength = Math.Max(args.Max(v => v.Length) - 1, 0);
+            for (int i = maxLength - 1; i >= 0; i--)
+            {
+                for (int j = 0; j < args.Length; j++)
+                {
+                    string arg = args[j];
+                    // Must be within the truncated range for the string. If empty, it must be 0..0
+                    truncArgs[j] = arg[..Math.Clamp(i, 0, Math.Max(arg.Length - 1, 0))];
+                }
+
+                yield return truncArgs;
+            }
+        }
+    }
 
     // Tests
     // Basic tests: Read and Empty
@@ -227,7 +249,7 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     // Do also read literals with no ignore JSC to test "Ended".
     [TestMethod]
     [Timeout(TestTimeout.Short)]
-    [DynamicData(nameof(JsonRootDataProcessors), DynamicDataDisplayName = nameof(GetRootDataProcessorTestName))]
+    [DynamicData(nameof(JsonRootDataProcessors))]
     public void TestJSCRootLiteralsWithCapture(string data)
     {
         // Micro$oft pls
@@ -242,16 +264,23 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
 
     // Empty root
     [TestMethod]
-    [DynamicData(nameof(JsonRootDataProcessors), DynamicDataDisplayName = nameof(GetRootDataProcessorTestName))]
-    public void TestRootLiterals(string data)
-    {
+    [DynamicData(nameof(JsonRootDataProcessors))]
+    public void TestRootLiterals(string data) =>
         // Since the empty builder for the sample code is simple but somewhat matching, it should equal.
         Assert.AreEqual(data, Read(CreateWithString(data)).ToString());
-    }
+    [TestMethod]
+    [DynamicData(nameof(JsonTruncatedRootDataProcessors), DynamicDataSourceType.Method)]
+    [ExpectedException(typeof(SJReader.ReadException))]
+    public void TestTruncatedRootLiterals(string data) => Read(CreateWithString(data));
     [TestMethod]
     [Timeout(TestTimeout.Short)]
-    // No longer throws.
-    public void TestEmptyString() => Read(CreateWithString(DataEmpty));
+    [ExpectedException(typeof(SJReader.ReadException))]
+    public void TestEmptyString()
+    {
+        var r = CreateWithString(DataEmpty);
+        r.ThrowOnError = true;
+        Read(r);
+    }
 
     // Stack
     [TestMethod]

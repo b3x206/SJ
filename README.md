@@ -222,7 +222,12 @@ You can also use the [unit tests](./SJ.Tests) as examples too.
 
 ---
 
-<!--
-Well, it is almost ~10x larger than OG SJ. Is it 10x better than SJ?
-Meh, no. I should probably name it something else.
--->
+## Changelog
+### - 1.0.0
+* Initial release as "SJ".
+* Somewhat janky unit tests, implicit/automated validation of files that were partially broken (is too permissive).
+* But still functional and can technically parse large valid JSON documents and JSC (Comments not captured).
+
+### - 2.0.0
+* TODO : Lots of things. Off my mind, changes are more explicit usage of API, more correctness checks (that I thought were being handled), much improved unit tests, old code has to be modified (to handle new SJ cases) and comments can be now captured.
+* Do a migration guide as well. (for the 1 user of the library, which is me)

@@ -1,0 +1,59 @@
+﻿using SJ.Examples;
+using static SJ.Tests.TestData;
+
+namespace SJ.Tests.Examples;
+
+[TestClass]
+public sealed class ExamplesUnitTests
+{
+    public static IEnumerable<string[]> TestDataProcessors => [
+        [JsonData1],
+        [JsonData2],
+        [JsonData3],
+        [JsonDataDiscard],
+        [JsonDataRootNull],
+        [JsonDataRootNumber],
+        [JsonDataRootBoolFalse],
+        [JsonDataRootBoolTrue],
+        [JsonDataRootString],
+    ];
+    public static IEnumerable<string[]> JscTestDataProcessors => [
+        [JsonDataComment],
+    ];
+
+    [TestMethod]
+    public void TestBasic()
+    {
+        Basic.TMain([]);
+    }
+    [TestMethod]
+    [DynamicData(nameof(TestDataProcessors))]
+    public void TestPrinter(string data)
+    {
+        Printer.TMain([AppDomain.CurrentDomain.FriendlyName, data]);
+    }
+    [TestMethod]
+    public void TestWriter()
+    {
+        Writer.TMain([]);
+    }
+
+    [TestMethod]
+    [DynamicData(nameof(TestDataProcessors))]
+    public void TestTreeFrom(string data)
+    {
+        var reader = new SJStringReader(data) { ThrowOnError = true };
+        var tree = SJTree.FromJSON(reader);
+
+        Console.WriteLine($"Parsed Tree : {tree}");
+    }
+    [TestMethod]
+    [DynamicData(nameof(TestDataProcessors))]
+    public void TestTreeTo(string data)
+    {
+        var reader = new SJStringReader(data) { ThrowOnError = true };
+        var tree = SJTree.FromJSON(reader);
+
+        Console.WriteLine($"Tree as JSON : {SJTree.ToJSON(tree)}");
+    }
+}
