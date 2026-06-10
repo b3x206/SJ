@@ -43,7 +43,7 @@ public static class ReaderTester
                 {
                     bool first = true;
                     sb.Append('[');
-                    while (reader.IterateArrayEntries(root, out _, out var v))
+                    while (reader.IterateArrayEntries(root, out var v))
                     {
                         // Skipping comments on array is easier. Technically could also do
                         // the "ObjectEntry type" sieve for array as well.
@@ -74,21 +74,17 @@ public static class ReaderTester
                     sb.Append('{');
 
                     SJReader.Value k = SJReader.Value.Error();
-                    while (reader.IterateObjectEntries(root, out var type, out var v))
+                    while (reader.IterateObjectEntries(root, out var v))
                     {
-                        if (v.type == SJType.Comment)
+                        switch (v.type)
                         {
-                            ReadInner(sb, reader, v);
-                            continue;
-                        }
-
-                        switch (type)
-                        {
-                            default: continue;
-                            case SJReader.EntryType.Key:
+                            case SJType.Comment:
+                                ReadInner(sb, reader, v);
+                                continue;
+                            case SJType.Key:
                                 k = v;
                                 continue;
-                            case SJReader.EntryType.Value:
+                            default:
                                 if (!first)
                                     sb.Append(',');
 
@@ -108,6 +104,7 @@ public static class ReaderTester
                     }
                     break;
                 }
+            case SJType.Key:
             case SJType.String:
                 {
                     sb.Append('"').Append(root.Slice()).Append('"');
@@ -166,7 +163,7 @@ public static class ReaderTester
             do
             {
                 ReadInner(sb, reader, root);
-                root = reader.Read();
+                root = reader.Read(); // Hmm, another architectural problem with Ended is that it should end when the Read is called on EOF, instead of according to semantics.
             }
             while (!reader.Ended);
         }

@@ -127,7 +127,7 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
         while (reader.IterateObject(root, out SJReader.Value k, out SJReader.Value v))
         {
             Assert.AreEqual(new string(k.Slice()), JsonDataSpamKey, "Keys must be equal");
-            Assert.AreEqual(SJType.String, k.type);
+            Assert.AreEqual(SJType.Key, k.type);
             Assert.AreEqual(new string(v.Slice()), JsonDataSpamValue, "Values must be equal");
             Assert.AreEqual(SJType.String, v.type);
         }
@@ -216,7 +216,7 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestJSCInvalid() => ReadJSC(CreateWithString(JsonDataCommentInvalid));
 
-    // JSC with Capture (hell)
+    // JSC with Capture
     [TestMethod]
     [Timeout(TestTimeout.Short)]
     public void TestJSCWithCapture() => ReadJSC(CreateWithString(JsonDataComment), false);
@@ -225,7 +225,7 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     [DataRow(@"{ ""key"" /* inline */ : ""value"" }")]
     [DataRow(@"{ ""key"" : /* inline */ ""value"" }")]
     [DataRow(@"{ ""key"" : ""value"" /* trailing */ , ""key2"": ""value2"" }")]
-    [DataRow(@"[ 1, 2, 3 /* trailing array */ , 4, 5]")]
+    [DataRow(@"[ 1, 2, 3 /* trailing array */, 4, 5]")]
     [DataRow(@"[ 1, 2, 3 /* trailing array */]")]
     public void TestJSCWithTrickyCapture(string data) => ReadJSC(CreateWithString(data), false);
     [TestMethod]
@@ -240,7 +240,7 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     {
         // Micro$oft pls
         string CommentLeft = "// This is a comment!" + Environment.NewLine;
-        string CommentRight = " // One more comment!" + Environment.NewLine + "/* Is it the end of file? */" + Environment.NewLine;
+        string CommentRight = "// One more comment!" + Environment.NewLine + "/* Is it the end of file? */"; // All whitespace (surrounding the document) is ignored.
 
         Assert.AreEqual(data, ReadJSC(CreateWithString(data), false).ToString());
         // To spice it up, surround root data with comments on second iter.

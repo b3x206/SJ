@@ -40,6 +40,7 @@ namespace SJ.Benchmark
             {
                 case SJType.Comment:
                 case SJType.Number:
+                case SJType.Key:
                 case SJType.String:
                 case SJType.Bool:
                 case SJType.Null:
@@ -48,22 +49,20 @@ namespace SJ.Benchmark
 
                 case SJType.Object:
                     SJReader.Value k = SJReader.Value.Error();
-                    while (reader.IterateObjectEntries(value, out var t, out var v))
+                    while (reader.IterateObjectEntries(value, out var v))
                     {
-                        switch (t)
+                        switch (v.type)
                         {
+                            case SJType.Key:
+                                k = v;
+                                continue;
+                            case SJType.Comment:
+                                ReadRecursiveInternal(reader, v, ref counter);
+                                continue;
+                            // This method is guaranteed to not return error, if the while loop evaluates correctly.
                             default:
                                 ReadRecursiveInternal(reader, v, ref counter);
-                                break;
-
-                            case SJReader.EntryType.Key:
-                                k = v;
-                                break;
-                            case SJReader.EntryType.Value:
-                                ReadRecursiveInternal(reader, k, ref counter);
-                                counter += 1;
-                                ReadRecursiveInternal(reader, v, ref counter);
-                                break;
+                                continue;
                         }
                     }
                     break;
