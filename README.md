@@ -2,27 +2,24 @@
 
 This is a port of https://github.com/rxi/sj.h/blob/master/sj.h with some "fixes" to improve correctness, alongside some added "epic oop inheritance design pattern" to allow reading from data implemented through by extending [`SJReader`](./SJ/SJReader.cs).
 
-This branch (`devel`) is where development is done, before getting packed into "two files". Development of the repository is done by using `git worktree` on seperate directories.
+This branch (`devel`) is where development is done, before getting packed into "two files". Development of the repository is done by using `git worktree` on seperate directories. This branch can have incomplete code pushed into it, so use with caution! Only the `devel` commits that I tag are "complete"<sup>[Notes##3](#notes)</sup>.
 
 ## Notes
 
-**1:**
+#### 1
+This is still not a **"100% correct" parser**, what it does with the data (outside of the JSON tokens) ultimately depends on what you read from the parsed chunks. It also _may fail_ on correct or _may not fail_ on wrong sequences. Use at your own risk.
 
-This is still not a **"100% correct" parser**, what it does with the data (outside of the JSON tokens) ultimately depends on what you read from the parsed chunks. (also some funny mistakes, but I write more and better tests to catch those now)
-
-**2:**
-
+#### 2
 Because of
 * C#-ifying the code
 * Improving "correctness"
 * And adding comment support.
 
-The code is more complicated. But I have taken the decision to make it simpler on `master`. Pushing here won't update `master` branch (yet), but I will do that sometime, where source is generated on push to `devel` for `master`..
+The code is **more complicated.** But I have taken the decision to make it simpler on `master`. Pushing here won't update `master` branch (yet), but I will do that sometime, where source is generated on push to `devel` for `master`..
 
-**3:**
-
+#### 3
 "Stable" SJ releases are the ones that are tagged with semver. <br>
-_(all tests pass, benchmarks are consistent or improved and it doesn't regress)_
+_(all tests pass, benchmarks are consistent, slightly worse or slightly improved and it doesn't regress too much)_
 
 ## Examples
 
@@ -30,7 +27,6 @@ _(all tests pass, benchmarks are consistent or improved and it doesn't regress)_
 
 Use the [`SJStringReader`](./SJ/SJStringReader.cs) class to get started.
 
-### Actually no this is somewhat "deprecated", don't do this unless you know reader ignores comments
 ```cs
 // A basic object deserialization example. Non-recursive.
 using SJ;
@@ -40,11 +36,10 @@ using System.Globalization;
 
 static Vector3 ReadVector3(SJReader reader, SJReader.Value root)
 {
-    // The S in SJ stands for Spaghetti in this case
-    reader.ignoreCapturedComments = true; // do this thx
     Vector3 result = Vector3.Zero;
 
     // If the data schema is "known", you can just read like this:
+    if (root.type != SJType.Object) throw new ArgumentException("Vector3 node type must be object", nameof(root));
     while (reader.IterateObject(root, out SJReader.Value key, out SJReader.Value value))
     {
         switch (char.ToLower(key.Slice()[0]))
@@ -59,7 +54,7 @@ static Vector3 ReadVector3(SJReader reader, SJReader.Value root)
     return result;
 }
 
-var data = @"{ ""x"": 42.0, ""y"": -42.0, ""z"": 0.0 }";
+const string data = @"{ ""x"": 42.0, ""y"": -42.0, ""z"": 0.0 }";
 var reader = new SJStringReader(data);
 
 SJReader.Value root = reader.Read();
@@ -67,15 +62,62 @@ Console.WriteLine($"Saved Position : {ReadVector3(reader, root)}");
 ```
 
 
-If processing comments are desired, you should read the document like this (in fact, you should read most documents like this, unless you assert that comments are ignored):
+If processing comments are desired, you should read the document like this: <br>
+_In fact, you should read most documents like this_
 ```cs
 using SJ;
+using System;
 
-static void ReadCommentedData(SJReader reader, SJReader.Value root)
+static void InspectConfigData(SJReader reader, SJReader.Value root)
 {
-    // TODO pls !!
+    if (root.type != SJType.Object) throw new ArgumentException("Config node type must be object", nameof(root));
+
+    string entrySum = "";
+    SJReader.Value key = SJReader.Value.Error();
+    while (reader.IterateObjectEntries(root, out var type, out var value))
+    {
+        switch (type)
+        {
+            case SJReader.EntryType.None:
+                const string SummaryTk = "@summary";
+                var comment = value.Slice(2, value.Length - 2).Trim();
+                if (comment.StartsWith(SummaryTk))
+                {
+                    entrySum = new string(comment.Slice(SummaryTk.Length).Trim());
+                }
+                continue;
+            case SJReader.EntryType.Key:
+                key = value;
+                continue;
+            case SJReader.EntryType.Value:
+                Console.WriteLine($"Summary: {entrySum}\n  {new string(key.Slice())} = {new string(value.Slice())}");
+                continue;
+        }
+    }
 }
 
+const string data = @"// The problem with comments is that they can appear anywhere.
+// Which makes some things that were implicit, explicit now.
+{
+    // Comments in JSON doesn't make much sense actually. Just use ini
+    /* @summary This field is 42, and actually you can put this within the JSON, but whatever.. */
+    ""is42"": 42
+}
+// And to validate EOF, do this (it was implicit with the last Read()) ↓
+";
+var reader = new SJStringReader(data)
+{
+    ignoreCapturedComments = false // opt-in to the new behaviour
+};
+
+SJReader.Value root = reader.Read();
+do
+{
+    if (root.type == SJType.Comment) continue; // Skip root level comments.
+    InspectConfigData(reader, root);
+    root = reader.Read(); // to not get stuck in an infinite loop
+}
+while (!reader.Ended);
 ```
 
 ---
@@ -112,7 +154,7 @@ using System;
 using System.Numerics;
 using System.Globalization;
 
-static Vector3 ReadVector3(SJReader reader, SJReader.Value root) ... // Copy the method from above
+static Vector3 ReadVector3(SJReader reader, SJReader.Value root) ... // Copy the method from above Vector3 reader
 
 // Serialize an arbitrary Vector3
 var writer = new SJStringWriter()
@@ -130,13 +172,17 @@ using (writer.Object())
 
 // Now deserialize it
 position = Vector3.Zero;
-var reader = new SJStringReader(writer.ToString());
+string data = writer.ReadData();
+var reader = new SJStringReader(data);
 position = ReadVector3(reader, reader.Read());
 
-Console.WriteLine($"Saved Position : {writer}, Read Position : {position}");
+// Use ReadData to read the resulting string.
+Console.WriteLine($"Saved Position : {data}, Read Position : {position}");
 ```
 
 ### Benchmarks
+**TODO : Outdated**
+
 * Read = Read a [small file (valid.json)](TestFiles/valid.json) 256 times
 * ReadLarge = Read a [large file (5mb.json)](TestFiles/5mb.json) 16 times
 * Write = Write few kb of JSON (`{ "random_key": "random_value", ... 512 entries }`) 256 times
@@ -174,3 +220,9 @@ These files are not included for compiling, you can copy and paste it normally.
 
 You can also use the [unit tests](./SJ.Tests) as examples too.
 
+---
+
+<!--
+Well, it is almost ~10x larger than OG SJ. Is it 10x better than SJ?
+Meh, no. I should probably name it something else.
+-->

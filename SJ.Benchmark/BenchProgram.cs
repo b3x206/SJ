@@ -38,27 +38,37 @@ namespace SJ.Benchmark
         {
             switch (value.type)
             {
+                case SJType.Comment:
                 case SJType.Number:
-                    counter += value.Slice().Length;
-                    break;
                 case SJType.String:
-                    counter += value.Slice().Length;
-                    break;
                 case SJType.Bool:
-                    counter += value.Slice().Length;
-                    break;
                 case SJType.Null:
-                    counter += value.Slice().Length;
+                    unchecked { counter += value.Slice().Length; }
                     break;
+
                 case SJType.Object:
-                    while (reader.IterateValues(value, out var keyOrValue))
+                    SJReader.Value k = SJReader.Value.Error();
+                    while (reader.IterateObjectEntries(value, out var t, out var v))
                     {
-                        // counter += keyOrValue.Slice().Length;
-                        ReadRecursiveInternal(reader, keyOrValue, ref counter);
+                        switch (t)
+                        {
+                            default:
+                                ReadRecursiveInternal(reader, v, ref counter);
+                                break;
+
+                            case SJReader.EntryType.Key:
+                                k = v;
+                                break;
+                            case SJReader.EntryType.Value:
+                                ReadRecursiveInternal(reader, k, ref counter);
+                                counter += 1;
+                                ReadRecursiveInternal(reader, v, ref counter);
+                                break;
+                        }
                     }
                     break;
                 case SJType.Array:
-                    while (reader.IterateValues(value, out var v))
+                    while (reader.IterateArray(value, out var v))
                     {
                         ReadRecursiveInternal(reader, v, ref counter);
                     }
@@ -146,7 +156,7 @@ namespace SJ.Benchmark
         }
     }
 
-    sealed class Program
+    sealed class BenchProgram
     {
         static void Main()
         {

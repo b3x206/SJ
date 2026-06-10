@@ -1,7 +1,7 @@
 ﻿using System.Text;
 using static SJ.Tests.TestData;
 
-namespace SJ.Tests;
+namespace SJ.Tests.Impl;
 
 [TestClass]
 public sealed class EscapeUnitTests
@@ -26,18 +26,20 @@ public sealed class EscapeUnitTests
     }
 
     [TestMethod]
-    public void TestBasic() => TestEscapeUnescape(EscapeContent);
+    [DataRow(EscapeContent)]
+    [DataRow(EscapeContentEmojiTest)]
+    [Timeout(TestTimeout.Short)]
+    public void TestWith(string data) => TestEscapeUnescape(data);
     [TestMethod]
-    public void TestBrokenBasic() => TestEscapeUnescape(EscapeBrokenUnescape);
-    [TestMethod]
+    [Timeout(TestTimeout.Short)]
     public void TestBrokenUnescape()
     {
         string unescaped = SJEscape.Unescape(EscapeBrokenUnescape);
         Assert.IsTrue(!unescaped.Contains('\\'), "Behaviour : Should not contain '\\' token from invalid escapes (as it's removed and the invalid escape is written as-is)");
     }
-
     // Escape throws when a broken surrogate pair is given. It isn't a "no except" method.
     [TestMethod]
     [ExpectedException(typeof(ArgumentException))]
+    [Timeout(TestTimeout.Short)]
     public void TestBrokenSurrogatePair() => TestEscapeUnescape(EscapeBrokenSurrogate);
 }

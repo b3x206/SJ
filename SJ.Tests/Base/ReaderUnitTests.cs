@@ -16,7 +16,6 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     // anyways, "it works"(tm). if only the data attributes could have been extended better.
 
     // Config
-    public const int SmallTestTimeout = 1000, MidTestTimeout = 5000, LargeTestTimeout = 30000;
     /// <summary>
     /// Create <typeparamref name="TReader"/> with the data for <paramref name="data"/>.
     /// </summary>
@@ -107,25 +106,25 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     // Tests
     // Basic tests: Read and Empty
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     public void TestBasic() => Read(CreateWithString(JsonData1));
     [TestMethod]
     [ExpectedException(typeof(SJReader.ReadException))]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     public void TestBasicInvalid() => Read(CreateWithString(JsonDataInvalid));
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     public void TestSlightlyComplicated() => Read(CreateWithString(JsonData2));
     // Emoji spams will get differently encoded strings
     [TestMethod]
-    [Timeout(MidTestTimeout)]
+    [Timeout(TestTimeout.Mid)]
     [DynamicData(nameof(EncodedStringProcessors), DynamicDataDisplayName = nameof(GetEncodedTestName))]
     public void TestEmojiSpam(Encoding enc)
     {
         var reader = CreateWithEncodedString(JsonData3, enc);
         var root = reader.Read();
         Assert.AreEqual(SJType.Object, root.type, $"Expected root to be object, it is instead this : {root}");
-        while (reader.IterateObject(root, out var k, out var v))
+        while (reader.IterateObject(root, out SJReader.Value k, out SJReader.Value v))
         {
             Assert.AreEqual(new string(k.Slice()), JsonDataSpamKey, "Keys must be equal");
             Assert.AreEqual(SJType.String, k.type);
@@ -134,7 +133,7 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
         }
     }
     [TestMethod]
-    [Timeout(MidTestTimeout)]
+    [Timeout(TestTimeout.Mid)]
     [DynamicData(nameof(EncodedStringProcessors), DynamicDataDisplayName = nameof(GetEncodedTestName))]
     public void TestEmojiSpamLiteral(Encoding enc)
     {
@@ -147,14 +146,14 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     // Check tricky conditions on the comma/colon state
     [TestMethod]
     [DataRow(64)]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     public void TestValidDeepObjects(int depth) => Read(CreateWithMaxRecursionString("{}", depth));
     [TestMethod]
     [DataRow(64)]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     public void TestValidDeepArray(int depth) => Read(CreateWithMaxRecursionString("[]", depth));
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     [DataRow(@"[""hello"" 1 2 3 4 5]")]
     [DataRow(@"{""hello"": 124 ""world!"": ""world: yo"" ""look"": ""no comma! waow bradar please JSON code make no mistakes""}")]
     [DataRow(@"{""hello"" 124, ""gurt"" ""yo"", ""yogurt"" ""yes""}")]
@@ -169,7 +168,7 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
         reader.ThrowOnError = true;
 
         var root = reader.Read();
-        while (reader.IterateObject(root, out var k, out var v))
+        while (reader.IterateObject(root, out SJReader.Value k, out SJReader.Value v))
         {
             if (k.Slice().Equals(discardKey, StringComparison.Ordinal))
             {
@@ -185,14 +184,14 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
 
                 case SJType.Object:
                     Console.WriteLine($"{k.Slice()} :");
-                    while (reader.IterateObject(v, out var k2, out var v2))
+                    while (reader.IterateObject(v, out SJReader.Value k2, out SJReader.Value v2))
                     {
                         Console.WriteLine($"  {k2.Slice()} : {v2.Slice()}");
                     }
                     break;
                 case SJType.Array:
                     Console.WriteLine($"{k.Slice()} :");
-                    while (reader.IterateEntries(v, out var av))
+                    while (reader.IterateArray(v, out SJReader.Value av))
                     {
                         Console.WriteLine($"  {av.Slice()}");
                     }
@@ -201,28 +200,28 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
         }
     }
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     public void TestDiscard() => TestDiscard(CreateWithString(JsonDataDiscard));
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestDiscardInvalid() => TestDiscard(CreateWithString(JsonDataDiscardInvalid));
 
     // JSC
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     public void TestJSC() => ReadJSC(CreateWithString(JsonDataComment));
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestJSCInvalid() => ReadJSC(CreateWithString(JsonDataCommentInvalid));
 
     // JSC with Capture (hell)
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     public void TestJSCWithCapture() => ReadJSC(CreateWithString(JsonDataComment), false);
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     [DataRow(@"{ ""key"" /* inline */ : ""value"" }")]
     [DataRow(@"{ ""key"" : /* inline */ ""value"" }")]
     [DataRow(@"{ ""key"" : ""value"" /* trailing */ , ""key2"": ""value2"" }")]
@@ -230,12 +229,12 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     [DataRow(@"[ 1, 2, 3 /* trailing array */]")]
     public void TestJSCWithTrickyCapture(string data) => ReadJSC(CreateWithString(data), false);
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestJSCInvalidWithCapture() => ReadJSC(CreateWithString(JsonDataInvalid), false);
     // Do also read literals with no ignore JSC to test "Ended".
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     [DynamicData(nameof(JsonRootDataProcessors), DynamicDataDisplayName = nameof(GetRootDataProcessorTestName))]
     public void TestJSCRootLiteralsWithCapture(string data)
     {
@@ -258,21 +257,21 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
         Assert.AreEqual(data, Read(CreateWithString(data)).ToString());
     }
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestEmptyString() => Read(CreateWithString(DataEmpty));
 
     // Stack
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestStacking() => Read(CreateWithString(JsonDataStackingInvalid));
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestMaxArrayRecursion() => Read((CreateWithMaxRecursionString("[]", MaxRecursionDepth)));
     [TestMethod]
-    [Timeout(SmallTestTimeout)]
+    [Timeout(TestTimeout.Short)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestMaxObjectRecursion() => Read(CreateWithMaxRecursionString("{}", MaxRecursionDepth));
 
@@ -281,28 +280,28 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     /// Tests reading a basic JSON file (100kb-ish).
     /// </summary>
     [TestMethod]
-    [Timeout(MidTestTimeout)]
+    [Timeout(TestTimeout.Mid)]
     public void TestFile() => Read(CreateWithFile(JsonFileValidName));
     /// <summary>
     /// Tests reading large JSON file.
     /// </summary>
     [TestMethod]
-    [Timeout(LargeTestTimeout)]
+    [Timeout(TestTimeout.Long)]
     public void TestVeryLarge()
     {
         Read(CreateWithFile(JsonFileLargeName));
         Read(CreateWithFile(JsonFileLargeMinName));
     }
     [TestMethod]
-    [Timeout(MidTestTimeout)]
+    [Timeout(TestTimeout.Mid)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestInvalidUnterminated() => Read(CreateWithFile(JsonFileInvalidUnterminated));
     [TestMethod]
-    [Timeout(MidTestTimeout)]
+    [Timeout(TestTimeout.Mid)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestInvalidNoColon() => Read(CreateWithFile(JsonFileInvalidNoColon));
     [TestMethod]
-    [Timeout(MidTestTimeout)]
+    [Timeout(TestTimeout.Mid)]
     [ExpectedException(typeof(SJReader.ReadException))]
     public void TestInvalidBinary() => Read(CreateWithFile(JsonFileInvalidBinary));
 }

@@ -61,7 +61,7 @@ sealed class SJTree
 
             case SJType.Array:
                 {
-                    while (reader.IterateValues(root, out var v))
+                    while (reader.IterateArray(root, out var v))
                     {
                         var node = new SJTree();
                         WriteFromInternal(node, reader, v);
@@ -76,7 +76,7 @@ sealed class SJTree
                 }
             case SJType.Object:
                 {
-                    while (reader.IterateObject(root, out var k, out var v))
+                    while (reader.IterateObject(root, out SJReader.Value k, out SJReader.Value v))
                     {
                         var node = new SJTree();
                         WriteFromInternal(node, reader, v);

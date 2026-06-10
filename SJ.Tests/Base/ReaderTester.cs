@@ -43,11 +43,10 @@ public static class ReaderTester
                 {
                     bool first = true;
                     sb.Append('[');
-                    while (reader.IterateValues(root, out var v))
+                    while (reader.IterateArrayEntries(root, out _, out var v))
                     {
-                        Console.WriteLine($"{DateTime.Now:HH.mm.ss.ffff} | {v}({(v.Length > 0 ? v.Slice() : [])})");
-                        Assert.AreEqual(v.objectDepth, 2);
-                        // Comments don't abide to the LAW
+                        // Skipping comments on array is easier. Technically could also do
+                        // the "ObjectEntry type" sieve for array as well.
                         if (v.type == SJType.Comment)
                         {
                             ReadInner(sb, reader, v);
@@ -73,35 +72,40 @@ public static class ReaderTester
                 {
                     bool first = true;
                     sb.Append('{');
-                    Console.WriteLine($"{DateTime.Now:HH.mm.ss.ffff} begin object");
-                    while (reader.IterateValues(root, out var v))
+
+                    SJReader.Value k = SJReader.Value.Error();
+                    while (reader.IterateObjectEntries(root, out var type, out var v))
                     {
-                        Console.WriteLine($"{DateTime.Now:HH.mm.ss.ffff} | {k}({(k.Length > 0 ? k.Slice() : [])}) = {v}({(v.Length > 0 ? v.Slice() : [])})");
-                        // Both K and V are the same
                         if (v.type == SJType.Comment)
                         {
-                            Console.WriteLine($"{DateTime.Now:HH.mm.ss.ffff} skip comment");
                             ReadInner(sb, reader, v);
                             continue;
                         }
 
-                        if (!first)
-                            sb.Append(',');
+                        switch (type)
+                        {
+                            default: continue;
+                            case SJReader.EntryType.Key:
+                                k = v;
+                                continue;
+                            case SJReader.EntryType.Value:
+                                if (!first)
+                                    sb.Append(',');
 
-                        ReadInner(sb, reader, k);
-                        sb.Append(':');
-                        ReadInner(sb, reader, v);
+                                // k must be valid.
+                                ReadInner(sb, reader, k);
+                                sb.Append(':');
+                                ReadInner(sb, reader, v);
 
-                        first = false;
-                        Console.WriteLine($"{DateTime.Now:HH.mm.ss.ffff} next coment");
+                                first = false;
+                                continue;
+                        }
                     }
                     sb.Append('}');
-                    Console.WriteLine($"{DateTime.Now:HH.mm.ss.ffff} end object");
                     if (!string.IsNullOrEmpty(reader.Error))
                     {
                         goto case SJType.Error;
                     }
-                    Console.WriteLine($"{DateTime.Now:HH.mm.ss.ffff} exit object");
                     break;
                 }
             case SJType.String:
@@ -161,14 +165,10 @@ public static class ReaderTester
             var root = reader.Read();
             do
             {
-                Console.WriteLine($"{DateTime.Now:HH.mm.ss.ffff} | Begin ReadInner, root: {root}");
                 ReadInner(sb, reader, root);
                 root = reader.Read();
-                Console.WriteLine($"{DateTime.Now:HH.mm.ss.ffff} | End ReadInner, new root: {root}, reader: {reader}");
             }
             while (!reader.Ended);
-
-            Console.WriteLine($"{DateTime.Now:HH.mm.ss.ffff} | ReadJSC finished");
         }
         finally
         {

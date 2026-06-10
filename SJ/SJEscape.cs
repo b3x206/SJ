@@ -259,11 +259,13 @@ namespace SJ
                                 char result = '\0';
                                 next = char.ToUpper(next);
                                 int nDigit = 0;
-                                for (int di = HexChar2Int(next); nDigit < 4 && di >= 0 && (nDigit + i) < content.Length; nDigit++)
+                                for (int j = 0; j < 4 && (i + j) < content.Length; j++)
+                                {
+
+                                }
+                                for (int di = HexChar2Int(next); nDigit < 4 && (nDigit + i) < content.Length; nDigit++)
                                 {
                                     result = (char)((result << 4) | di);
-
-                                    // cur = content[nDigit + i + 1];
                                     next = char.ToUpper(((nDigit + i + 1) < (content.Length - 1)) ? content[(nDigit + i + 1) + 1] : '\0');
                                     di = HexChar2Int(next);
                                 }
@@ -276,6 +278,7 @@ namespace SJ
                                     count++;
                                     i += nDigit;
                                 }
+                                // otherwise escape as is
                                 else
                                 {
                                     appendAction(self, cur);
