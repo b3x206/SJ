@@ -66,10 +66,10 @@ namespace SJ
     ///     public override int Length => _Data?.Length ?? 0;
     ///     // Because I ported the pointer stuff as-is, some parts of the parser may read off by one.
     ///     // It is recommended to do a bound check and return EOF of your choice
-    ///     protected override char At(int i) => i >= 0 && i < Length ? _Data[i] : '\0';
+    ///     public override char At(int i) => i >= 0 && i < Length ? _Data[i] : '\0';
     ///     // Because each value slice is evaluated lazily, the data ranges must persist and should be representable easily as a range (making arbitrary Streams much harder)
     ///     // Note that there isn't much of a reason to do this, if you read the data as soon as it's received from the SJReader.
-    ///     protected override ReadOnlySpan<char> Slice(int start, int length) => string.IsNullOrEmpty(_Data) ? ReadOnlySpan<char>.Empty : _Data.AsSpan(start, length);
+    ///     public override ReadOnlySpan<char> Slice(int start, int length) => string.IsNullOrEmpty(_Data) ? ReadOnlySpan<char>.Empty : _Data.AsSpan(start, length);
     /// }
     /// ]]>
     /// </example>
@@ -315,12 +315,14 @@ namespace SJ
         /// Get a character at <paramref name="i"/>.
         /// <br><b>Note:</b> This can receive OOB reads, generally at <paramref name="i"/> == <see cref="Length"/></br>
         /// <br>In this case, it is necessary to handle that exact condition with '\0' / EOF character of your choice.</br>
+        /// <br>If reading from a stream, this should maybe seek within the index buffer or go back to the "approximate position" or refer to the underlying "string buffer"</br>
         /// </summary>
-        protected abstract char At(int i);
+        public abstract char At(int i);
         /// <summary>
-        /// Create a "char" slice, starting from <paramref name="start"/> with <paramref name="length"/>.
+        /// Create a literal "char" slice, starting from <paramref name="start"/> with <paramref name="length"/> on the data source.
+        /// <br>Used for the <see cref="Value"/>'s <see cref="Value.Slice"/></br>
         /// </summary>
-        protected abstract ReadOnlySpan<char> Slice(int start, int length);
+        public abstract ReadOnlySpan<char> Slice(int start, int length);
 
         /// <summary>
         /// <see cref="SJType.Number"/> continuation check, Note that this reader 

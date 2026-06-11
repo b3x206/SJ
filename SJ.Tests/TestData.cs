@@ -136,8 +136,8 @@ public static class TestData
 
     // - Escape Data
     public const string EscapeContent = "Quote: \", Backslash: \\, Tab: \t, Newline: \n, Pizza: \uD83C\uDF55, The 🅱 variant: \uD83C\uDD71\uFE0F";
-    public const string EscapeBrokenUnescape = "Oh wow, I'm escaping things I shouldn't! : \\a\\b\\c\\d \\e\\f\\g\\h\\i\\j\\k \\l\\m\\n\\o\\p\\q\\r\\s\\ t\\u\\v\\w\\x\\y\\z\\A\\B\\C \\D\\E\\F\\G\\H\\I\\J\\K\\L\\M\\N\\O\\P\\Q\\ R\\S\\T\\U\\V \\W\\X \\Y\\Z'";
-    public const string EscapeBrokenSurrogate = "\uDF55\uD83C\uDD71\uD83C\uFE0F In C++, surrogate escape you!";
+    public const string EscapeInvalidUnescape = "Oh wow, I'm escaping things I shouldn't! : \\a\\b\\c\\d \\e\\f\\g\\h\\i\\j\\k \\l\\m\\n\\o\\p\\q\\r\\s\\ t\\u\\v\\w\\x\\y\\z\\A\\B\\C \\D\\E\\F\\G\\H\\I\\J\\K\\L\\M\\N\\O\\P\\Q\\ R\\S\\T\\U\\V \\W\\X \\Y\\Z'";
+    public const string EscapeInvalidSurrogate = "\uDF55\uD83C\uDD71\uD83C\uFE0F In C++, surrogate escape you!";
     public const string EscapeContentEmojiTest = @"✀ABCDEFGHIJKLMNOPQRSTUVWXYZ
 ✁abcdefghijklmnopqrstuvwxyz
 ✂ABCDEFGHIJKLMNOPQRSTUVWXYZ

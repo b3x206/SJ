@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using SJ.Tests.Base;
+using System.Text;
 using static SJ.Tests.TestData;
 
 namespace SJ.Tests;
@@ -10,11 +11,11 @@ public sealed class EscapeUnitTests
     {
         var sb = new StringBuilder(content.Length * 2);
         var sbUnescaped = new StringBuilder(content.Length);
-        foreach (var opts in Enum.GetValues<SJEscape.EscapeOptions>())
+        foreach (var asciiOnly in new bool[] { false, true })
         {
             sb.Clear(); sbUnescaped.Clear(); // Clear to avoid invalid length
 
-            int escapeCount = SJEscape.Escape(sb, static (s, c) => s.Append(c), content, opts);
+            int escapeCount = SJEscape.Escape(sb, static (s, c) => s.Append(c), content, asciiOnly);
             Assert.AreEqual(sb.Length, escapeCount, $"Expected {sb.Length}, got {escapeCount} for:\n{sb}");
 
             int unescapeCount = SJEscape.Unescape(sbUnescaped, static (s, c) => s.Append(c), sb.ToString());
@@ -25,21 +26,25 @@ public sealed class EscapeUnitTests
         }
     }
 
+    // Very long strings may cause problems.
+    public static IEnumerable<string[]> TruncatedDataProcessors => TestEx.CreateTruncatedDataProcessors([[EscapeContent], [EscapeInvalidSurrogate], [EscapeInvalidUnescape]]);
+
     [TestMethod]
-    [DataRow(EscapeContent)]
+    [DynamicData(nameof(TruncatedDataProcessors))]
     [DataRow(EscapeContentEmojiTest)]
     [Timeout(TestTimeout.Short)]
     public void TestWith(string data) => TestEscapeUnescape(data);
+
+    [TestMethod]
+    [DataRow(EscapeContentEmojiTest)]
+    [DynamicData(nameof(TruncatedDataProcessors))]
+    [Timeout(TestTimeout.Short)]
+    public void TestTruncated(string data) => TestEscapeUnescape(data);
+
     [TestMethod]
     [Timeout(TestTimeout.Short)]
     public void TestBrokenUnescape()
     {
-        string unescaped = SJEscape.Unescape(EscapeBrokenUnescape);
-        Assert.IsTrue(!unescaped.Contains('\\'), "Behaviour : Should not contain '\\' token from invalid escapes (as it's removed and the invalid escape is written as-is)");
+        Assert.IsTrue(!SJEscape.Unescape(EscapeInvalidUnescape).Contains('\\'), "Behaviour : Should not contain '\\' token from invalid escapes (as it's removed and the invalid escape is written as-is)");
     }
-    // Escape throws when a broken surrogate pair is given. It isn't a "no except" method.
-    [TestMethod]
-    [ExpectedException(typeof(ArgumentException))]
-    [Timeout(TestTimeout.Short)]
-    public void TestBrokenSurrogatePair() => TestEscapeUnescape(EscapeBrokenSurrogate);
 }

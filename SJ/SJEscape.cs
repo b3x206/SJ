@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace SJ
 {
@@ -9,34 +10,41 @@ namespace SJ
     /// </summary>
     public static class SJEscape
     {
-        [Flags]
-        public enum EscapeOptions
+        private static readonly byte[] hex2IntTable;
+        private enum EscapeTableAction : byte
         {
-            /// <summary>
-            /// Escape nothing, the string is written as is.
-            /// </summary>
-            None = 0,
-            /// <summary>
-            /// Escape multiple <see cref="char"/> UTF-16 sequences. (for ucs-2?)
-            /// </summary>
-            SurrogatePair = 1 << 0,
-            /// <summary>
-            /// Escape any character that is not within ASCII range.
-            /// This also applies the <see cref="SurrogatePair"/>, so it isn't really necessary to include 
-            /// </summary>
-            NonAscii = 1 << 1,
+            None = 0,                  // No escape
+            // ...                     // Anything as the target char value, within sbyte.MaxValue
+            Self = sbyte.MaxValue + 1, // Escape as \\self
+            Hex                        // Escape as \u4HEXDIG
+        }
+        private static readonly EscapeTableAction[] escapeTable;
+        static SJEscape()
+        {
+            // Hex2IntTable
+            const byte AsciiTableMax = sbyte.MaxValue + 1;
+            hex2IntTable = new byte[AsciiTableMax];
+            Array.Fill(hex2IntTable, byte.MaxValue); // Because 0 is a valid value
+            for (int i = '0'; i <= '9'; i++) hex2IntTable[i] = (byte)(i - '0');
+            for (int i = 'a'; i <= 'f'; i++) hex2IntTable[i] = (byte)(10 + (i - 'a'));
+            for (int i = 'A'; i <= 'f'; i++) hex2IntTable[i] = (byte)(10 + (i - 'A'));
 
-            All = ~0,
+            // EscapeTable
+            escapeTable = new EscapeTableAction[AsciiTableMax];
+            // JSON only cares escaping certain control ranges, not the unicode stuff
+            for (int i = 0; i < 0x1F; i++) escapeTable[i] = EscapeTableAction.Hex;
+            // The other escapes
+            escapeTable[(byte)'\\'] = EscapeTableAction.Self;
+            escapeTable[(byte)'"'] = EscapeTableAction.Self;
+            escapeTable[(byte)'\b'] = (EscapeTableAction)'b';
+            escapeTable[(byte)'\f'] = (EscapeTableAction)'f';
+            escapeTable[(byte)'\n'] = (EscapeTableAction)'n';
+            escapeTable[(byte)'\r'] = (EscapeTableAction)'r';
+            escapeTable[(byte)'\t'] = (EscapeTableAction)'t';
+
+            // TODO : The other way, UnescapeTable
         }
 
-        private static int HexChar2Int(char c)
-        {
-            if (c >= '0' && c <= '9') { return c - '0'; }
-            if (c >= 'a' && c <= 'f') { return c - 'a' + 10; }
-            if (c >= 'A' && c <= 'F') { return c - 'A' + 10; }
-
-            return -1;
-        }
         private static void To4DigitHex(char c, int index, ref Span<char> chars)
         {
             Debug.Assert((chars.Length - index) >= 4);
@@ -57,7 +65,7 @@ namespace SJ
         /// <param name="content">Content to escape, this mustn't have broken surrogate pairs.</param>
         /// <exception cref="ArgumentException"></exception>
         /// <returns>Count of written characters.</returns>
-        public static int Escape<TSelf>(TSelf self, Action<TSelf, char> appendAction, ReadOnlySpan<char> content, EscapeOptions escapeOpts = EscapeOptions.None)
+        public static int Escape<TSelf>(TSelf self, Action<TSelf, char> appendAction, ReadOnlySpan<char> content, bool asciiOnly = false)
         {
             if (appendAction is null)
             {
@@ -72,42 +80,40 @@ namespace SJ
             {
                 char cur = content[i];
                 char next = (i < (content.Length - 1)) ? content[i + 1] : '\0';
-                switch (cur)
+                if (cur < escapeTable.Length)
                 {
-                    case '"':
-                    case '\\':
-                        appendAction(self, '\\');
-                        appendAction(self, cur);
-                        count += 2;
-                        continue;
-                    case '\b':
-                        appendAction(self, '\\');
-                        appendAction(self, 'b');
-                        count += 2;
-                        continue;
-                    case '\f':
-                        appendAction(self, '\\');
-                        appendAction(self, 'f');
-                        count += 2;
-                        continue;
-                    case '\n':
-                        appendAction(self, '\\');
-                        appendAction(self, 'n');
-                        count += 2;
-                        continue;
-                    case '\r':
-                        appendAction(self, '\\');
-                        appendAction(self, 'r');
-                        count += 2;
-                        continue;
-                    case '\t':
-                        appendAction(self, '\\');
-                        appendAction(self, 't');
-                        count += 2;
-                        continue;
-                }
+                    switch (escapeTable[cur])
+                    {
+                        case EscapeTableAction.None:
+                            break;
 
-                if (char.IsControl(cur))
+                        default:
+                            appendAction(self, '\\');
+                            appendAction(self, (char)escapeTable[cur]);
+                            count += 2;
+                            break;
+
+                        case EscapeTableAction.Self:
+                            appendAction(self, '\\');
+                            appendAction(self, cur);
+                            count += 2;
+                            break;
+
+                        case EscapeTableAction.Hex:
+                            // write as : \uXXXX
+                            To4DigitHex(cur, ref hex);
+                            appendAction(self, '\\');
+                            appendAction(self, 'u');
+                            count += 2;
+                            for (int j = 0; j < hex.Length; j++)
+                            {
+                                appendAction(self, hex[j]);
+                                count++;
+                            }
+                            break;
+                    }
+                }
+                else if (asciiOnly)
                 {
                     // write as : \uXXXX
                     To4DigitHex(cur, ref hex);
@@ -119,82 +125,34 @@ namespace SJ
                         appendAction(self, hex[j]);
                         count++;
                     }
-
-                    continue;
                 }
-
-                // must be strict with output data
-                // oh well let the user handle it's own mojibake. or not
-                // ?? : https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#well-formed_json.stringify
-                bool expectSurrogatePair = char.IsHighSurrogate(cur);
-                if (expectSurrogatePair && !char.IsLowSurrogate(next))
+                else
                 {
-                    throw new ArgumentException("Invalid surrogate pair in given argument.", nameof(content));
+                    // Range outside of ascii
+                    appendAction(self, cur);
+                    count++;
                 }
-                if (expectSurrogatePair && (escapeOpts & EscapeOptions.SurrogatePair) == EscapeOptions.SurrogatePair)
-                {
-                    // write as : \uXXXX\uXXXX
-                    To4DigitHex(cur, ref hex);
-                    appendAction(self, '\\');
-                    appendAction(self, 'u');
-                    count += 2;
-                    for (int j = 0; j < hex.Length; j++)
-                    {
-                        appendAction(self, hex[j]);
-                        count++;
-                    }
-
-                    To4DigitHex(next, ref hex);
-                    appendAction(self, '\\');
-                    appendAction(self, 'u');
-                    count += 2;
-                    for (int j = 0; j < hex.Length; j++)
-                    {
-                        appendAction(self, hex[j]);
-                        count++;
-                    }
-
-                    // iterate char twice for pair
-                    i++;
-                    continue;
-                }
-
-                if (cur > sbyte.MaxValue && (escapeOpts & EscapeOptions.NonAscii) == EscapeOptions.NonAscii)
-                {
-                    // write as : \uXXXX
-                    To4DigitHex(cur, ref hex);
-                    appendAction(self, '\\');
-                    appendAction(self, 'u');
-                    count += 2;
-                    for (int j = 0; j < hex.Length; j++)
-                    {
-                        appendAction(self, hex[j]);
-                        count++;
-                    }
-
-                    continue;
-                }
-
-                appendAction(self, cur);
-                count++;
             }
 
             return count;
         }
-        /// <inheritdoc cref="Escape{TSelf}(TSelf, Action{TSelf, char}, ReadOnlySpan{char}, EscapeOptions)"/>
-        public static string Escape(ReadOnlySpan<char> content, EscapeOptions escapeOpts = EscapeOptions.None)
+        /// <inheritdoc cref="Escape{TSelf}(TSelf, Action{TSelf, char}, ReadOnlySpan{char}, bool)"/>
+        public static string Escape(ReadOnlySpan<char> content, bool asciiOnly = false)
         {
             var sb = new StringBuilder(content.Length + (content.Length / 2)); // Content is "shorter"
-            Escape(sb, SBAppendAction, content, escapeOpts);
+            Escape(sb, SBAppendAction, content, asciiOnly);
             return sb.ToString();
         }
-        /// <inheritdoc cref="Escape{TSelf}(TSelf, Action{TSelf, char}, ReadOnlySpan{char}, EscapeOptions)"/>
-        public static string Escape(string content, EscapeOptions escapeOpts = EscapeOptions.None) =>
-            Escape(content.AsSpan(), escapeOpts);
+        /// <inheritdoc cref="Escape{TSelf}(TSelf, Action{TSelf, char}, ReadOnlySpan{char}, bool)"/>
+        public static string Escape(string content, bool asciiOnly = false) =>
+            Escape(content.AsSpan(), asciiOnly);
 
         /// <summary>
         /// Unescapes <paramref name="content"/> with escapes.
         /// </summary>
+        /// <remarks>
+        /// This is more permissive on what it accepts, as it will accept invalid escapes like "\\k" and unescape it like "k"
+        /// </remarks>
         /// <param name="appendAction">Action called when a character is to be appended into the arbitrary buffer.</param>
         /// <param name="content">Content to unescape.</param>
         /// <returns>Count of written characters.</returns>
@@ -217,11 +175,9 @@ namespace SJ
                     {
                         appendAction(self, cur);
                         count++;
-                        continue;
+                        break;
                     }
-
                     cur = content[i];
-                    char next = (i < (content.Length - 1)) ? content[i + 1] : '\0';
 
                     switch (cur)
                     {
@@ -255,32 +211,40 @@ namespace SJ
                         case 'u':
                             {
                                 // Strictly expect 4 digits
-                                // Otherwise the escaper, especially with ascii, logic breaks
+                                const int TargetDelta = 5; // length(u1234)
                                 char result = '\0';
-                                next = char.ToUpper(next);
-                                int nDigit = 0;
-                                for (int j = 0; j < 4 && (i + j) < content.Length; j++)
-                                {
+                                int start = i;
+                                i++;
 
-                                }
-                                for (int di = HexChar2Int(next); nDigit < 4 && (nDigit + i) < content.Length; nDigit++)
+                                while (i < content.Length && (i - start) < TargetDelta)
                                 {
-                                    result = (char)((result << 4) | di);
-                                    next = char.ToUpper(((nDigit + i + 1) < (content.Length - 1)) ? content[(nDigit + i + 1) + 1] : '\0');
-                                    di = HexChar2Int(next);
+                                    cur = content[i];
+                                    // Character is within the range
+                                    if (cur >= hex2IntTable.Length)
+                                    {
+                                        break;
+                                    }
+                                    // Whether if digit is valid
+                                    int digit = hex2IntTable[cur];
+                                    if (digit == 0xFF)
+                                    {
+                                        break;
+                                    }
+
+                                    result = (char)((result << 4) | digit);
+                                    i++;
                                 }
 
-                                // note : nDigit becomes 4 because the condition normally stops at 4, which is target
-                                if (nDigit == 4)
+                                if ((i - start) == TargetDelta)
                                 {
                                     // UTF-16 point
                                     appendAction(self, (char)(result & char.MaxValue));
                                     count++;
-                                    i += nDigit;
                                 }
                                 // otherwise escape as is
                                 else
                                 {
+                                    i -= TargetDelta; // i will be incremented beyond 'u'
                                     appendAction(self, cur);
                                     count++;
                                 }

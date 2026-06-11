@@ -7,7 +7,7 @@ public static class WriterTester
     public static bool WriteTest(SJWriter writer)
     {
         ArgumentNullException.ThrowIfNull(writer);
-        if (writer.Depth <= 0)
+        if (writer.depth <= 0)
         {
             throw new ArgumentException("Can't write test values to top level object.", nameof(writer));
         }
@@ -136,11 +136,14 @@ public static class WriterTester
         Assert.That.IsNullOrEmpty(writer.Error, $"Writer error must be empty before checking a failing write. Error : {writer.Error}");
         Assert.IsFalse(writer.Write("Real or fake? No no fake!"), "Writing must fail");
     }
-    public static bool WriteTestDepth(SJWriter writer)
+    public static bool WriteMaxTestDepth(SJWriter writer)
     {
         writer.maxDepth = Math.Max(writer.maxDepth, 128);
-
-        for (int i = 0; i < writer.maxDepth + 1; i++)
+        return WriteTestDepth(writer, writer.maxDepth + 1);
+    }
+    public static bool WriteTestDepth(SJWriter writer, int depth)
+    {
+        for (int i = 0; i < depth; i++)
         {
             if ((i % 2) == 0)
             {

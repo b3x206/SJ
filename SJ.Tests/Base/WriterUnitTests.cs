@@ -185,7 +185,6 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
     }
 
     [TestMethod]
-    [ExpectedException(typeof(SJWriter.WriteException))]
     [Timeout(TestTimeout.Short)]
     public void TestDepth()
     {
@@ -195,7 +194,26 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             writer.indentSize = 4;
             writer.ThrowOnError = true;
 
-            Assert.IsTrue(WriteTestDepth(writer), "Depth test must fail"); // ← Must throw WriteException instead
+            writer.maxDepth = 128;
+            Assert.IsFalse(WriteTestDepth(writer, 64));
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
+    [TestMethod]
+    [ExpectedException(typeof(SJWriter.WriteException))]
+    [Timeout(TestTimeout.Short)]
+    public void TestMaxDepth()
+    {
+        var writer = CreateWriter();
+        try
+        {
+            writer.indentSize = 4;
+            writer.ThrowOnError = true;
+
+            Assert.IsTrue(WriteMaxTestDepth(writer), "Depth test must fail"); // ← Must throw WriteException instead
             Console.WriteLine($"fail : {writer}");
         }
         finally
@@ -205,14 +223,15 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
     }
     [TestMethod]
     [Timeout(TestTimeout.Short)]
-    public void TestDepthNoExcept()
+    public void TestMaxDepthNoExcept()
     {
         var writer = CreateWriter();
         try
         {
             writer.indentSize = 4;
             writer.ThrowOnError = false;
-            Assert.IsTrue(WriteTestDepth(writer), "Depth test must fail");
+
+            Assert.IsTrue(WriteMaxTestDepth(writer), "Depth test must fail");
             Assert.That.IsNotNullOrEmpty(writer.Error, "Writer should have an error set after failing");
         }
         finally

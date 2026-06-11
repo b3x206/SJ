@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Globalization;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Buffers;
 
@@ -70,7 +69,7 @@ namespace SJ
         /// <summary>
         /// A tracker for type information that can be stacked and indexed (i.e. recursive data)
         /// </summary>
-        public struct WriteStackInfo
+        public struct State
         {
             /// <summary>
             /// Write type, this is generally either 
@@ -86,13 +85,13 @@ namespace SJ
             /// </summary>
             public readonly bool Valid => type != SJType.Error && type != SJType.End && index >= 0;
 
-            public static readonly WriteStackInfo Invalid = new WriteStackInfo(SJType.Error) { index = -1 };
-            public WriteStackInfo(SJType type)
+            public static readonly State Invalid = new State(SJType.Error) { index = -1 };
+            public State(SJType type)
             {
                 this.type = type;
                 index = 0;
             }
-            public static implicit operator WriteStackInfo(SJType type) => new WriteStackInfo(type);
+            public static implicit operator State(SJType type) => new State(type);
 
             public override readonly string ToString()
             {
@@ -183,6 +182,7 @@ namespace SJ
         /// Amount written by this writer.
         /// </summary>
         public int count;
+        public int depth;
         protected string _Error = string.Empty;
         /// <summary>
         /// The error string detailing why the writer failed.
@@ -205,23 +205,45 @@ namespace SJ
                 }
             }
         }
-        public Stack<WriteStackInfo> writeStack = new Stack<WriteStackInfo>();
-        public WriteStackInfo Top
+        protected const int DefaultStackSize = 8;
+        protected State[] _stateStack = new State[DefaultStackSize];
+        private State _stubState = State.Invalid;
+        public bool HasState => depth > 0;
+        public virtual int PushState(State s)
         {
-            get => writeStack.Count > 0 ? writeStack.Peek() : WriteStackInfo.Invalid;
+            if ((_stateStack?.Length - 1) < depth)
+            {
+                System.Array.Resize(ref _stateStack, _stateStack.Length <= 0 ? DefaultStackSize : _stateStack.Length * 2);
+            }
+            int pushIndex = depth++;
+            _stateStack[pushIndex] = s;
+            return pushIndex;
+        }
+        public ref State PeekState()
+        {
+            if (!HasState)
+            {
+                _stubState = State.Invalid;
+                return ref _stubState;
+            }
+            return ref _stateStack[depth - 1];
+        }
+        public ref State PopState()
+        {
+            // PopState should throw as it mutates..
+            if (!HasState) throw new InvalidOperationException("Cannot peek state while there is no state.");
+            return ref _stateStack[--depth];
+        }
+        public State Top
+        {
+            get => PeekState();
             set
             {
-                if (!writeStack.TryPop(out _))
-                {
-                    Error = "Tried to set the top of the write stack while the stack depth is zero.";
-                    return;
-                }
-
-                writeStack.Push(value);
+                ref State s = ref PeekState();
+                s = value;
             }
         }
 
-        public int Depth => writeStack.Count;
         // This state doesn't need to be put into the write stack
         // as from what I see on JSON.parse, keys must be string, so there is no recursion on those
         // Though it has to be reset correctly in this case.
@@ -280,9 +302,9 @@ namespace SJ
             }
             count += indentSize * depth;
         }
-        protected void WriteEscaped(ReadOnlySpan<char> data, SJEscape.EscapeOptions options)
+        protected void WriteEscaped(ReadOnlySpan<char> data, bool asciiOnly)
         {
-            count += SJEscape.Escape(this, selfAppend, data, options);
+            count += SJEscape.Escape(this, selfAppend, data, asciiOnly);
         }
         protected void PrepareValue()
         {
@@ -306,7 +328,7 @@ namespace SJ
                         Append('\n');
                         count++;
 
-                        WriteIndent(Depth);
+                        WriteIndent(depth);
                     }
                 }
 
@@ -326,7 +348,7 @@ namespace SJ
                 Append('\n');
                 count++;
 
-                WriteIndent(Depth);
+                WriteIndent(depth);
             }
         }
 
@@ -342,7 +364,7 @@ namespace SJ
                 Error = "Expected writing object key";
                 return false;
             }
-            if (maxDepth > 0 && Depth >= maxDepth)
+            if (maxDepth > 0 && depth >= maxDepth)
             {
                 Error = $"Exceeded max write depth '{maxDepth}'";
                 return false;
@@ -352,7 +374,7 @@ namespace SJ
             Append('{');
             count++;
 
-            writeStack.Push(SJType.Object);
+            PushState(SJType.Object);
 
             // Wait for a key
             kvState = 1;
@@ -380,9 +402,9 @@ namespace SJ
             // Can end object
             kvState = 0;
             int prevIndex = Top.index;
-            writeStack.Pop();
+            PopState();
 
-            if (Depth <= 0)
+            if (depth <= 0)
             {
                 finish = true;
             }
@@ -410,7 +432,7 @@ namespace SJ
                 Error = "Expected writing object key";
                 return false;
             }
-            if (maxDepth > 0 && Depth >= maxDepth)
+            if (maxDepth > 0 && depth >= maxDepth)
             {
                 Error = $"Exceeded max write depth '{maxDepth}'";
                 return false;
@@ -421,7 +443,7 @@ namespace SJ
             count++;
             kvState = 0;
 
-            writeStack.Push(SJType.Array);
+            PushState(SJType.Array);
             return true;
         }
         public bool EndArray()
@@ -443,8 +465,8 @@ namespace SJ
             }
 
             int prevIndex = Top.index;
-            writeStack.Pop();
-            if (Depth <= 0)
+            PopState();
+            if (depth <= 0)
             {
                 finish = true;
             }
@@ -468,7 +490,7 @@ namespace SJ
         /// <param name="options">Options for escaping the <paramref name="name"/> string.</param>
         /// <returns>Whether if the write was successful.</returns>
         public virtual bool WriteKey(
-            ReadOnlySpan<char> name, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None
+            ReadOnlySpan<char> name, bool asciiOnly = false
         )
         {
             if (!NeedKey)
@@ -480,7 +502,7 @@ namespace SJ
             PrepareValue();
 
             Append('"'); count++;
-            WriteEscaped(name, options);
+            WriteEscaped(name, asciiOnly);
             Append('"'); count++;
 
             Append(':'); count++;
@@ -524,7 +546,7 @@ namespace SJ
             Append(data);
             count += data.Length;
 
-            if (Depth <= 0)
+            if (depth <= 0)
             {
                 // Number is top level
                 finish = true;
@@ -615,7 +637,7 @@ namespace SJ
             return WriteLiteralValue(data.Slice(0, written));
         }
         public bool WriteString(
-            ReadOnlySpan<char> value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None
+            ReadOnlySpan<char> value, bool asciiOnly = false
         )
         {
             // This one does some things different enough that it can't be "WriteLiteral"
@@ -627,7 +649,7 @@ namespace SJ
             if (NeedKey)
             {
                 // eh sure, works, similar intent
-                return WriteKey(value, options);
+                return WriteKey(value, asciiOnly);
             }
 
             PrepareValue();
@@ -635,12 +657,12 @@ namespace SJ
             Append('"');
             count++;
 
-            WriteEscaped(value, options);
+            WriteEscaped(value, asciiOnly);
 
             Append('"');
             count++;
 
-            if (Depth <= 0)
+            if (depth <= 0)
             {
                 finish = true;
             }
@@ -664,8 +686,8 @@ namespace SJ
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Write(ulong number, string format = "G") => WriteULong(number, format);
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Write(ReadOnlySpan<char> value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None) => WriteString(value, options);
-        public bool Write(string value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None)
+        public bool Write(ReadOnlySpan<char> value, bool asciiOnly = false) => WriteString(value, asciiOnly);
+        public bool Write(string value, bool asciiOnly = false)
         {
             // For the case of "Write" without any "info", the string overload is called for `null`
             // There will be an explicit check only for this. For anything else, null is treated as `default` or `string.Empty`
@@ -675,7 +697,7 @@ namespace SJ
                 return WriteNull();
             }
 
-            return WriteString(value, options);
+            return WriteString(value, asciiOnly);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Write(bool value) => WriteBool(value);
@@ -717,19 +739,19 @@ namespace SJ
             return WriteULong(number, format);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool WriteKV(ReadOnlySpan<char> key, ReadOnlySpan<char> value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None)
+        public bool WriteKV(ReadOnlySpan<char> key, ReadOnlySpan<char> value, bool asciiOnly = false)
         {
-            if (!WriteKey(key))
+            if (!WriteKey(key, asciiOnly))
             {
                 return false;
             }
 
-            return WriteString(value, options);
+            return WriteString(value, asciiOnly);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool WriteKV(ReadOnlySpan<char> key, string value, SJEscape.EscapeOptions options = SJEscape.EscapeOptions.None)
+        public bool WriteKV(ReadOnlySpan<char> key, string value, bool asciiOnly = false)
         {
-            if (!WriteKey(key))
+            if (!WriteKey(key, asciiOnly))
             {
                 return false;
             }
@@ -739,7 +761,7 @@ namespace SJ
                 return WriteNull();
             }
 
-            return WriteString(value, options);
+            return WriteString(value, asciiOnly);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool WriteKV(ReadOnlySpan<char> key, bool value)
@@ -796,10 +818,10 @@ namespace SJ
         public virtual void Reset()
         {
             count = 0;
+            depth = 0;
             kvState = 0;
             finish = false;
             Error = null;
-            writeStack.Clear();
         }
 
 #pragma warning restore IDE0057 // Unity does not support System.Range

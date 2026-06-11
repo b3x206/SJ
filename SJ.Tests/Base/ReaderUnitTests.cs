@@ -1,6 +1,7 @@
 ﻿using static SJ.Tests.TestData;
 using System.Text;
 using System.Reflection;
+using SJ.Tests.Base;
 
 namespace SJ.Tests;
 
@@ -138,30 +139,7 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     /// Collection of root data (that are either empty or not)
     /// </summary>
     public static IEnumerable<string[]> JsonRootDataProcessors => [[JsonDataEmptyObject], [JsonDataEmptyArray], [JsonDataRootString], [JsonDataRootNumber], [JsonDataRootBoolFalse], [JsonDataRootBoolTrue], [JsonDataRootNull]];
-    public static IEnumerable<string[]> JsonTruncatedRootDataProcessors()
-    {
-        foreach (var args in JsonRootDataProcessors)
-        {
-            // The number can be "safely truncated" and is loosely enforced. Skip that explicitly.
-            // Note that this will break if multiple number args are given. But ehh... Whatever
-            if (args.Length <= 0) continue;
-            if (args.Length == 1 && args[0] == JsonDataRootNumber) continue;
-
-            string[] truncArgs = new string[args.Length];
-            int maxLength = Math.Max(args.Max(v => v.Length) - 1, 0);
-            for (int i = maxLength; i >= 0; i--)
-            {
-                for (int j = 0; j < args.Length; j++)
-                {
-                    string arg = args[j];
-                    // Must be within the truncated range for the string. If empty, it must be 0..0
-                    truncArgs[j] = arg[..Math.Clamp(i, 0, arg.Length)];
-                }
-
-                yield return truncArgs;
-            }
-        }
-    }
+    public static IEnumerable<string[]> JsonTruncatedRootDataProcessors() => TestEx.CreateTruncatedDataProcessors(JsonRootDataProcessors.Where(v => v.Length > 0 && v[0] != JsonDataRootNumber));
 
     // Tests
     // Basic tests: Read and Empty
