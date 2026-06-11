@@ -5,7 +5,7 @@ namespace SJ.Tests.Impl;
 [TestClass]
 public sealed class StringReaderUnitTests : ReaderUnitTests<SJStringReader>
 {
-    public override SJStringReader CreateWithString(string data) => new(data);
+    public override SJStringReader CreateFromString(string data) => new(data);
     public override SJStringReader CreateFromStream(Stream data, Encoding? enc)
     {
         ArgumentNullException.ThrowIfNull(data);

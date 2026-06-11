@@ -125,7 +125,7 @@ namespace SJ.Tests
         public static string ToJSON(SJTree tree, SJWriter writer)
         {
             WriteTo(tree, writer);
-            return writer.ToString() ?? "";
+            return writer.ReadData() ?? "";
         }
         public static void WriteTo(SJTree tree, SJWriter writer)
         {

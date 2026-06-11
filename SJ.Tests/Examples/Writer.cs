@@ -8,7 +8,7 @@ namespace SJ.Examples
         {
             var writer = new SJStringWriter()
             {
-                // Enable pretty printing
+                // Enable pretty printing. Setting this 0 or less will disable pretty printing.
                 indentSize = 4,
                 // Don't throw on error for now
                 ThrowOnError = false,
@@ -64,11 +64,9 @@ namespace SJ.Examples
                 //   not expecting a value before doing this.
 
                 // It is possible to nest objects. It will also be auto indented too with pretty printing:
-                writer.WriteKey("numbers that i like");
-                using (writer.Object())
+                using (writer.ObjectKV("numbers that i like"))
                 {
-                    writer.WriteKey("in childhood");
-                    using (writer.Array())
+                    using (writer.ArrayKV("in childhood"))
                     {
                         writer.Write(3.141592); // Larp pro max
                         writer.Write(2); // It's nice

@@ -16,6 +16,7 @@ public sealed class ExamplesUnitTests
         [JsonDataRootBoolFalse],
         [JsonDataRootBoolTrue],
         [JsonDataRootString],
+        [DataEmpty],
     ];
     public static IEnumerable<string[]> JscTestDataProcessors => [
         [JsonDataComment],
@@ -30,7 +31,14 @@ public sealed class ExamplesUnitTests
     [DynamicData(nameof(TestDataProcessors))]
     public void TestPrinter(string data)
     {
-        Printer.TMain([AppDomain.CurrentDomain.FriendlyName, data]);
+        if (string.IsNullOrEmpty(data))
+        {
+            Printer.TMain([AppDomain.CurrentDomain.FriendlyName]);
+        }
+        else
+        {
+            Printer.TMain([AppDomain.CurrentDomain.FriendlyName, data]);
+        }
     }
     [TestMethod]
     public void TestWriter()
@@ -42,6 +50,11 @@ public sealed class ExamplesUnitTests
     [DynamicData(nameof(TestDataProcessors))]
     public void TestTreeFrom(string data)
     {
+        if (string.IsNullOrEmpty(data))
+        {
+            return;
+        }
+
         var reader = new SJStringReader(data) { ThrowOnError = true };
         var tree = SJTree.FromJSON(reader);
 
@@ -51,6 +64,11 @@ public sealed class ExamplesUnitTests
     [DynamicData(nameof(TestDataProcessors))]
     public void TestTreeTo(string data)
     {
+        if (string.IsNullOrEmpty(data))
+        {
+            return;
+        }
+
         var reader = new SJStringReader(data) { ThrowOnError = true };
         var tree = SJTree.FromJSON(reader);
 

@@ -18,6 +18,11 @@ namespace SJ.Examples
                         // Or you can throw like : reader.ThrowError();
                         break;
                     }
+                case SJType.Comment:
+                    {
+                        // Discard comments explicitly, if capturing those and don't care about it.
+                        break;
+                    }
 
                 case SJType.Array:
                     {

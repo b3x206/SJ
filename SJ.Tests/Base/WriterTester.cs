@@ -4,7 +4,7 @@ namespace SJ.Tests;
 
 public static class WriterTester
 {
-    public static bool WriteTestValues(SJWriter writer)
+    public static bool WriteTest(SJWriter writer)
     {
         ArgumentNullException.ThrowIfNull(writer);
         if (writer.Depth <= 0)
@@ -136,21 +136,27 @@ public static class WriterTester
         Assert.That.IsNullOrEmpty(writer.Error, $"Writer error must be empty before checking a failing write. Error : {writer.Error}");
         Assert.IsFalse(writer.Write("Real or fake? No no fake!"), "Writing must fail");
     }
-    public static bool TestDepthWith(SJWriter writer)
+    public static bool WriteTestDepth(SJWriter writer)
     {
         writer.maxDepth = Math.Max(writer.maxDepth, 128);
 
         for (int i = 0; i < writer.maxDepth + 1; i++)
         {
-            if (!writer.BeginObject())
+            if ((i % 2) == 0)
             {
-                return true;
+                if (!writer.BeginObject()) return true;
+            }
+            else
+            {
+                // Previous entry was Object, which should be "valid" if it didn't fail
+                if (!writer.WriteKey("a")) return false;
+                if (!writer.BeginArray()) return true;
             }
         }
 
         return false;
     }
-    public static void TestRootWith(SJWriter writer)
+    public static void WriteTestRoot(SJWriter writer)
     {
         ArgumentNullException.ThrowIfNull(writer);
 

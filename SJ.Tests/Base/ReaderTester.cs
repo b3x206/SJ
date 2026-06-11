@@ -121,57 +121,43 @@ public static class ReaderTester
     }
     public const int DefaultSbCapacity = 512;
 
-    public static void Read(SJReader reader, StringBuilder sb, bool disposeAfterReading = true)
+    public static void Read(SJReader reader, StringBuilder sb)
     {
         ArgumentNullException.ThrowIfNull(reader);
 
-        try
+        sb.Clear();
+        for (var root = reader.Read(); !reader.ended; root = reader.Read())
         {
-            sb.Clear();
-            for (var root = reader.Read(); !reader.ended; root = reader.Read())
-            {
-                ReadInner(sb, reader, root);
-            }
-        }
-        finally
-        {
-            if (disposeAfterReading && reader is IDisposable d) d.Dispose();
+            ReadInner(sb, reader, root);
         }
     }
-    public static StringBuilder Read(SJReader reader, bool disposeAfterReading = true)
+    public static StringBuilder Read(SJReader reader)
     {
         ArgumentNullException.ThrowIfNull(reader);
 
         var sb = new StringBuilder(DefaultSbCapacity);
-        Read(reader, sb, disposeAfterReading);
+        Read(reader, sb);
         return sb;
     }
 
-    public static void ReadJSC(SJReader reader, StringBuilder sb, bool ignoreComments = true, bool disposeAfterReading = true)
+    public static void ReadJSC(SJReader reader, StringBuilder sb, bool ignoreComments = true)
     {
         ArgumentNullException.ThrowIfNull(reader);
 
-        try
+        sb.Clear();
+        reader.allowComments = true;
+        reader.ignoreCapturedComments = ignoreComments;
+        for (var root = reader.Read(); !reader.ended; root = reader.Read())
         {
-            sb.Clear();
-            reader.allowComments = true;
-            reader.ignoreCapturedComments = ignoreComments;
-            for (var root = reader.Read(); !reader.ended; root = reader.Read())
-            {
-                ReadInner(sb, reader, root);
-            }
-        }
-        finally
-        {
-            if (disposeAfterReading && reader is IDisposable d) d.Dispose();
+            ReadInner(sb, reader, root);
         }
     }
-    public static StringBuilder ReadJSC(SJReader reader, bool ignoreComments = true, bool disposeAfterReading = true)
+    public static StringBuilder ReadJSC(SJReader reader, bool ignoreComments = true)
     {
         ArgumentNullException.ThrowIfNull(reader);
 
         var sb = new StringBuilder(DefaultSbCapacity);
-        ReadJSC(reader, sb, ignoreComments, disposeAfterReading);
+        ReadJSC(reader, sb, ignoreComments);
         return sb;
     }
 }

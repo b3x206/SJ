@@ -31,20 +31,21 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
     /// </summary>
     public virtual Type[] ReadDataConsistencyExceptionTypes => _ReadDataConsistencyExceptionTypes;
     [TestMethod]
+    [Timeout(TestTimeout.Short)]
     public void TestReadDataConsistency()
     {
         var writer = CreateWriter();
         try
         {
-            writer.ThrowOnError = true;
             // Buffered objects may struggle with converting representation to string.
+            writer.ThrowOnError = true;
             using (writer.Object())
             {
-                Assert.IsTrue(WriteTestValues(writer), "Writing must go without any errors");
+                Assert.IsTrue(WriteTest(writer), "Writing must go without any errors");
 
-                using (writer.ArrayKV("test on le array"))
+                using (writer.ArrayKV("array"))
                 {
-                    Assert.IsTrue(WriteTestValues(writer), "Writing must go without any errors");
+                    Assert.IsTrue(WriteTest(writer), "Writing must go without any errors");
                 }
             }
 
@@ -54,7 +55,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
                 {
                     writer.ReadData();
                 }
-                catch (Exception ex) when (Enumerable.Contains(ReadDataConsistencyExceptionTypes, ex.GetType()))
+                catch (Exception ex) when (ReadDataConsistencyExceptionTypes.Contains(ex.GetType()))
                 {
                     Console.WriteLine($"Caught false CanReadData exception '{ex}'");
                 }
@@ -70,7 +71,39 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             DisposeWriter(writer);
         }
     }
+    public virtual void BaseTestDisposeTwice()
+    {
+        bool firstDisposeValid = false;
+        var writer = CreateWriter();
+        try
+        {
+            writer.ThrowOnError = true;
+            using (writer.Object())
+            {
+                WriteTest(writer);
+            }
+
+            firstDisposeValid = DisposeWriter(writer);
+            if (!firstDisposeValid)
+            {
+                Assert.Inconclusive($"Writer '{writer}' with type '{writer.GetType()}' is not disposable (according to the test)");
+                return;
+            }
+
+            Assert.IsTrue(DisposeWriter(writer), "Second dispose must not fail");
+            Assert.IsTrue(DisposeWriter(writer), "Third dispose must not fail");
+        }
+        finally
+        {
+            if (firstDisposeValid && writer is not null)
+            {
+                Assert.IsTrue(DisposeWriter(writer), "Fourth dispose must not fail, if first one is valid.");
+            }
+        }
+    }
+
     [TestMethod]
+    [Timeout(TestTimeout.Short)]
     public void TestRootWrite()
     {
         var writer = CreateWriter();
@@ -79,7 +112,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             writer.indentSize = 4;
             writer.ThrowOnError = false;
 
-            TestRootWith(writer);
+            WriteTestRoot(writer);
         }
         finally
         {
@@ -87,6 +120,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
         }
     }
     [TestMethod]
+    [Timeout(TestTimeout.Short)]
     public void TestWrite()
     {
         var writer = CreateWriter();
@@ -99,11 +133,11 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             using (writer.Object())
             {
                 // Though ThrowOnError is true, so :shrug:
-                Assert.IsTrue(WriteTestValues(writer), "Writing must go without any errors");
+                Assert.IsTrue(WriteTest(writer), "Writing must go without any errors");
 
                 using (writer.ArrayKV("test on le array"))
                 {
-                    Assert.IsTrue(WriteTestValues(writer), "Writing must go without any errors");
+                    Assert.IsTrue(WriteTest(writer), "Writing must go without any errors");
                 }
             }
 
@@ -128,6 +162,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
         }
     }
     [TestMethod]
+    [Timeout(TestTimeout.Mid)]
     public void TestWriteEmojiSpam()
     {
         var writer = CreateWriter();
@@ -151,6 +186,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
 
     [TestMethod]
     [ExpectedException(typeof(SJWriter.WriteException))]
+    [Timeout(TestTimeout.Short)]
     public void TestDepth()
     {
         var writer = CreateWriter();
@@ -159,7 +195,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             writer.indentSize = 4;
             writer.ThrowOnError = true;
 
-            Assert.IsTrue(TestDepthWith(writer), "Depth test must fail"); // ← Must throw WriteException instead
+            Assert.IsTrue(WriteTestDepth(writer), "Depth test must fail"); // ← Must throw WriteException instead
             Console.WriteLine($"fail : {writer}");
         }
         finally
@@ -168,6 +204,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
         }
     }
     [TestMethod]
+    [Timeout(TestTimeout.Short)]
     public void TestDepthNoExcept()
     {
         var writer = CreateWriter();
@@ -175,7 +212,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
         {
             writer.indentSize = 4;
             writer.ThrowOnError = false;
-            Assert.IsTrue(TestDepthWith(writer), "Depth test must fail");
+            Assert.IsTrue(WriteTestDepth(writer), "Depth test must fail");
             Assert.That.IsNotNullOrEmpty(writer.Error, "Writer should have an error set after failing");
         }
         finally
@@ -198,6 +235,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
     }
     [TestMethod]
     [ExpectedException(typeof(SJWriter.WriteException))]
+    [Timeout(TestTimeout.Short)]
     public void TestStack()
     {
         var writer = CreateWriter();
@@ -215,6 +253,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
         }
     }
     [TestMethod]
+    [Timeout(TestTimeout.Short)]
     public void TestStackNoExcept()
     {
         var writer = CreateWriter();
@@ -232,6 +271,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
     }
 
     [TestMethod]
+    [Timeout(TestTimeout.Short)]
     public void TestNegativeWrite()
     {
         // The codepaths are generally the same so I will only test WriteLiteralValue and WriteKey instead

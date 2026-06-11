@@ -579,6 +579,10 @@ namespace SJ
                 result.start = result.end = current;
                 result.objectDepth = -1;
                 ended = true;
+                if (depth > 0)
+                {
+                    Error = PeekState().type switch { SJType.Object => "Unclosed object", SJType.Array => "Unclosed array", _ => "Unclosed with invalid stack type" };
+                }
                 return result;
             }
             if (maxDepth > 0 && depth > maxDepth)
@@ -948,7 +952,7 @@ namespace SJ
         /// <summary>
         /// Get the current readout location.
         /// </summary>
-        public bool Location(out int line, out int column)
+        public virtual bool Location(out int line, out int column)
         {
             if (Length <= 0)
             {
@@ -978,9 +982,11 @@ namespace SJ
         }
         /// <summary>
         /// Reset the read state.
-        /// <br>This is called when <see cref="Data"/> is set to a new value.</br>
         /// </summary>
-        public void Reset()
+        /// <remarks>
+        /// <br><b>This shouldn't discard data and only reset the state.</b>(should have called it flush award)</br>
+        /// </remarks>
+        public virtual void Reset()
         {
             current = depth = 0;
             LastEntryKey = default;
