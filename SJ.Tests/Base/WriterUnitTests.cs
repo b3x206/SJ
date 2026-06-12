@@ -104,12 +104,14 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
 
     [TestMethod]
     [Timeout(TestTimeout.Short)]
-    public void TestRootWrite()
+    [DataRow(0, DisplayName = "Indent 0 (No pretty print)")]
+    [DataRow(4, DisplayName = "Indent 4")]
+    public void TestRootWrite(int indent)
     {
         var writer = CreateWriter();
         try
         {
-            writer.indentSize = 4;
+            writer.indentSize = indent;
             writer.ThrowOnError = false;
 
             WriteTestRoot(writer);
@@ -121,12 +123,14 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
     }
     [TestMethod]
     [Timeout(TestTimeout.Short)]
-    public void TestWrite()
+    [DataRow(0, DisplayName = "Indent 0 (No pretty print)")]
+    [DataRow(4, DisplayName = "Indent 4")]
+    public void TestWrite(int indent)
     {
         var writer = CreateWriter();
         try
         {
-            writer.indentSize = 4;
+            writer.indentSize = indent;
             writer.ThrowOnError = true;
 
             // Writing an object that looks like this.
@@ -161,6 +165,27 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             DisposeWriter(writer);
         }
     }
+    [TestMethod]
+    [DataRow(0, DisplayName = "Indent 0 (No pretty print)")]
+    [DataRow(4, DisplayName = "Indent 4")]
+    [Timeout(TestTimeout.Short)]
+    public void TestRootJSCWrite(int indent)
+    {
+        var writer = CreateWriter();
+        try
+        {
+            writer.indentSize = indent;
+            writer.ThrowOnError = false;
+            writer.allowComments = true;
+
+            WriteTestRootJSC(writer);
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
+
     [TestMethod]
     [Timeout(TestTimeout.Mid)]
     public void TestWriteEmojiSpam()

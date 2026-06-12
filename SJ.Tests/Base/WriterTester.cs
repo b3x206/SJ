@@ -217,7 +217,7 @@ public static class WriterTester
         writer.Reset();
 
         // Floating point numbers are somewhat indeterminate, so use the same format and hope for the best.
-        // Note : SJWriter used to write floats using double, but now it writes using float.
+        // Note : Writer used to write floats using double, but now it writes using float type (so that the rounding is same).
         //        So the ToString behaviour should be same.
         const float FloatVal = 1.234f;
         writer.Write(FloatVal, FloatFmt);
@@ -245,5 +245,102 @@ public static class WriterTester
         WriterDataEquals($"\"{SJEscape.Escape(TestContent)}\"");
         WriteMustFailAfter(writer);
         writer.Reset();
+    }
+    public static void WriteTestRootJSC(SJWriter writer)
+    {
+        ArgumentNullException.ThrowIfNull(writer);
+
+        void WriterDataEquals(string s)
+        {
+            if (!writer.CanReadData)
+            {
+                Assert.Inconclusive($"[!] Cannot TestRootWith on writer type '{writer.GetType().AssemblyQualifiedName}' as data can't be read. Comparison was for '{s}'");
+            }
+
+            Assert.AreEqual(s, writer.ReadData());
+        }
+
+        writer.indentSize = 4;
+        writer.allowComments = true;
+
+        const char Pad = ' ';
+        const string C1 = "CommentLine", C2 = "Comment ML", C3 = "Last Comment Line"; 
+        // Root level writes
+        writer.WriteCommentLine(C1, Pad);
+        writer.Write(true);
+        writer.WriteComment(C2, Pad);
+        writer.WriteCommentLine(C3, Pad);
+        WriterDataEquals($"//{Pad}{C1}\ntrue/*{Pad}{C2}{Pad}*/\n//{Pad}{C3}");
+        WriteMustFailAfter(writer);
+        writer.Reset();
+
+        /*
+        writer.Write(false);
+        WriterDataEquals("false");
+        WriteMustFailAfter(writer);
+        writer.Reset();
+
+        writer.WriteNull();
+        WriterDataEquals("null");
+        WriteMustFailAfter(writer);
+        writer.Reset();
+
+        writer.Write(null);
+        WriterDataEquals("null");
+        WriteMustFailAfter(writer);
+        writer.Reset();
+
+        const string IntFmt = "G";
+        const string FloatFmt = "R";
+        var numberCulture = CultureInfo.InvariantCulture;
+
+        const int IntVal = 676767;
+        writer.Write(IntVal, IntFmt);
+        WriterDataEquals(IntVal.ToString(IntFmt));
+        WriteMustFailAfter(writer);
+        writer.Reset();
+
+        const long LongVal = 1234123412341234123L;
+        writer.Write(LongVal, IntFmt);
+        WriterDataEquals(LongVal.ToString(IntFmt, numberCulture));
+        WriteMustFailAfter(writer);
+        writer.Reset();
+
+        const ulong ULongVal = 12341234123412341234UL;
+        writer.Write(ULongVal, IntFmt);
+        WriterDataEquals(ULongVal.ToString(IntFmt, numberCulture));
+        WriteMustFailAfter(writer);
+        writer.Reset();
+
+        // Floating point numbers are somewhat indeterminate, so use the same format and hope for the best.
+        // Note : Writer used to write floats using double, but now it writes using float type (so that the rounding is same).
+        //        So the ToString behaviour should be same.
+        const float FloatVal = 1.234f;
+        writer.Write(FloatVal, FloatFmt);
+        WriterDataEquals(FloatVal.ToString(FloatFmt, numberCulture));
+        WriteMustFailAfter(writer);
+        writer.Reset();
+
+        const double DoubleVal = 0.1d + 0.2d;
+        writer.Write(DoubleVal, FloatFmt);
+        WriterDataEquals(DoubleVal.ToString(FloatFmt, numberCulture));
+        WriteMustFailAfter(writer);
+        writer.Reset();
+
+        // Well I didn't know this was possible
+        const string DoubleFmt = "G999";
+        writer.Write(double.MaxValue, DoubleFmt);
+        WriterDataEquals(double.MaxValue.ToString(DoubleFmt, numberCulture));
+        WriteMustFailAfter(writer);
+        writer.Reset();
+
+        // Generally, the test content isn't escaped (it's written as is)
+        // The escaping is "tested", so I will not test that.
+        const string TestContent = "Quote: \", Backslash: \\, Tab: \t, Newline: \n, Pizza: \uD83C\uDF55, The 🅱 variant: \uD83C\uDD71\uFE0F";
+        writer.Write(TestContent);
+        WriterDataEquals($"\"{SJEscape.Escape(TestContent)}\"");
+        WriteMustFailAfter(writer);
+        writer.Reset();
+        */
     }
 }

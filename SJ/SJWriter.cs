@@ -166,7 +166,7 @@ namespace SJ
         /// <summary>
         /// Whether to allow any <see cref="WriteComment"/>.
         /// </summary>
-        public bool canWriteComments = false;
+        public bool allowComments = false;
         protected bool _ThrowOnError = false;
         /// <summary>
         /// When an erroreneous case occurs (or <see cref="Error"/> is set to anything other 
@@ -370,6 +370,7 @@ namespace SJ
                 }
                 else
                 {
+                    // Single line comments should have next value with comma prefixed.
                     top.skipBeforeSep = !multiline;
                 }
 
@@ -450,9 +451,21 @@ namespace SJ
             {
                 finish = true;
             }
-            else if (top.type == SJType.Object)
+            else
             {
-                expect = Expect.Key;
+                switch (top.type)
+                {
+                    case SJType.Array:
+                        break;
+                    case SJType.Object:
+                        expect = Expect.Key;
+                        break;
+
+                    default:
+                        Error = $"Invalid top state type {top.type}";
+                        return false;
+                }
+                if (top.index > 0) expect |= Expect.Comma;
             }
 
             PrepareEndValue(prevIndex);
@@ -524,9 +537,21 @@ namespace SJ
             {
                 finish = true;
             }
-            else if (top.type == SJType.Object)
+            else
             {
-                expect = Expect.Key;
+                switch (top.type)
+                {
+                    case SJType.Array:
+                        break;
+                    case SJType.Object:
+                        expect = Expect.Key;
+                        break;
+
+                    default:
+                        Error = $"Invalid top state type {top.type}";
+                        return false;
+                }
+                if (top.index > 0) expect |= Expect.Comma;
             }
 
             PrepareEndValue(prevIndex);
@@ -643,12 +668,7 @@ namespace SJ
         /// <returns>Whether if the write was successful.</returns>
         public virtual bool WriteComment(ReadOnlySpan<char> data, char pad = ' ', bool hasNextValue = false)
         {
-            if (finish)
-            {
-                Error = "Attempt to write into a finished JSONWriter";
-                return false;
-            }
-            if (!canWriteComments)
+            if (!allowComments)
             {
                 Error = "Cannot write comments on this writer, enable canWriteComments";
                 return false;
@@ -660,40 +680,60 @@ namespace SJ
             if (pad != 0) { Append(pad); count++; }
             Append(data);
             if (pad != 0) { Append(pad); count++; }
-            Append("/*"); count -= 2;
+            Append("*/"); count += 2;
 
             return true;
         }
         /// <summary>
         /// Write a comment for JSON, starting with // and ending with newline character
         /// </summary>
+        /// <remarks>
+        /// If no pretty printing and writing inside, this calls <see cref="WriteComment"/> instead.
+        /// <br>If no pretty printing, but not writing inside, this will do a new line.</br>
+        /// </remarks>
         /// <param name="hasNextValue">
         /// <br>To print "prettier", add a trailing comma or colon to the previous value. This will look nicer like</br>
-        /// <c><br>"value": // ...\n</br></c>
-        /// <br>instead of the usual <c>"value" // ...\n:</c></br>
-        /// <br><b>Set this <see langword="true"/> with caution, as you can produce invalid JSC with it.</b></br>
+        /// <c><br>["value", // ...\n ... </br></c>
+        /// <br>instead of the usual <c>["value" // ...\n,</c></br>
+        /// <br><b>Set this <see langword="true"/> with caution, as you can produce invalid Json (trailing commas) with it.</b></br>
         /// </param>
         /// <param name="data">Data inside the comment to write. It is padded with spaces by default.</param>
         /// <param name="prefixPad">Padding prefix character to use. Pass 0 to not pad the <paramref name="data"/> with anything.</param>
         /// <returns>Whether if the write was successful.</returns>
         public virtual bool WriteCommentLine(ReadOnlySpan<char> data, char prefixPad = ' ', bool hasNextValue = false)
         {
-            if (finish)
-            {
-                Error = "Attempt to write into a finished JSONWriter";
-                return false;
-            }
-            if (!canWriteComments)
+            if (!allowComments)
             {
                 Error = "Cannot write comments on this writer, enable canWriteComments";
                 return false;
             }
+            if (depth > 0 && indentSize <= 0)
+            {
+                return WriteComment(data, prefixPad, hasNextValue);
+            }
 
             PrepareCommentValue(false, hasNextValue);
 
-            Append("//"); count++;
-            if (prefixPad != 0) { Append(prefixPad); count++; }
-            Append(data);
+            Append("//"); count += 2;
+            if (prefixPad != 0 && prefixPad != '\r' && prefixPad != '\n') { Append(prefixPad); count++; }
+            // Data must be checked for '\n'
+            for (int i = 0; i < data.Length; i++)
+            {
+                char c = data[i];
+                if (c == '\n')
+                {
+                    Append(c);
+
+                    PrepareIndentLine(depth);
+                    Append("//"); count += 2;
+                    if (prefixPad != 0 && prefixPad != '\r' && prefixPad != '\n') { Append(prefixPad); count++; }
+                    continue;
+                }
+
+                Append(c);
+            }
+            // Comment lines should be new lined
+            Append('\n');
 
             return true;
         }
@@ -825,7 +865,6 @@ namespace SJ
 
             return true;
         }
-
 
         // These are like "extensions"
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

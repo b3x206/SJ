@@ -63,7 +63,7 @@ Console.WriteLine($"Saved Position : {ReadVector3(reader, root)}");
 
 
 If processing comments are desired, you should read the document like this: <br>
-_In fact, you should read most documents like this_
+_In fact, you should read most documents like this._
 ```cs
 using SJ;
 using System;
@@ -143,8 +143,7 @@ This is used as the default string escape for the Writer.
 
 ### Writer
 
-TODO (?) : Writer will also need `WriteComment` :) :) :) <br>
-But the basic usage will **not change**, great success! <br>
+Actually not success, entire code went kaput :(
 
 Use the [`SJStringWriter`](SJ/SJStringWriter.cs) class to get started.
 
