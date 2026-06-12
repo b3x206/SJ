@@ -1,11 +1,9 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Diagnosers;
 
 namespace SJ.Benchmark;
 
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
-[EventPipeProfiler(EventPipeProfile.CpuSampling)]
 public abstract class SJWriterBenchmark<TWriter> where TWriter : SJWriter
 {
     public const int NWriteIters = 256;
@@ -48,15 +46,17 @@ public abstract class SJWriterBenchmark<TWriter> where TWriter : SJWriter
     public virtual int WriteDataOnly(TWriter writer, int iters, int elemCount)
     {
         writer.Reset();
-        
+
         // Baseline should also do the benchmark chunking, but it won't do the "JSON details"
         for (int i = 0; i < iters; i++)
         {
             // Append is exposed, so I will just do this.
-            // I exposed the Writer internals because of this as well.
-            // If you want a "more accurate baseline" (i.e. write without going through the callstack salad), override this.
-            writer.Append(GetRandomKey(i));
-            writer.Append(GetRandomValue(i));
+            // I exposed the Reader internals because of this as well.
+            ReadOnlySpan<char> k = GetRandomKey(i), v = GetRandomKey(i);
+            writer.Append(k);
+            writer.count += k.Length;
+            writer.Append(v);
+            writer.count += v.Length;
         }
 
         return writer.count;

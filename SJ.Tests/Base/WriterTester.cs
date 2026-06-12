@@ -12,11 +12,11 @@ public static class WriterTester
             throw new ArgumentException("Can't write test values to top level object.", nameof(writer));
         }
 
-        int startingIndex = writer.Top.index;
-        void CheckWriterIndex() => Assert.AreEqual(++startingIndex, writer.Top.index, "Expected write to increase top level element counter index");
+        int startingIndex = writer.PeekState().index;
+        void CheckWriterIndex() => Assert.AreEqual(++startingIndex, writer.PeekState().index, "Expected write to increase top level element counter index");
 
         bool success = string.IsNullOrEmpty(writer.Error);
-        switch (writer.Top.type)
+        switch (writer.PeekState().type)
         {
             case SJType.Object:
                 {
@@ -126,7 +126,7 @@ public static class WriterTester
                     break;
                 }
             default:
-                throw new ArgumentException($"Unexpected top level type {writer.Top.type}", nameof(writer));
+                throw new ArgumentException($"Unexpected top level type {writer.PeekState().type}", nameof(writer));
         }
 
         return success;

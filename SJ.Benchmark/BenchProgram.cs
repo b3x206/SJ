@@ -1,5 +1,6 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Reports;
 using BenchmarkDotNet.Running;
 using Perfolizer.Horology;
@@ -7,7 +8,6 @@ using System.Text;
 
 namespace SJ.Benchmark
 {
-
     [MemoryDiagnoser]
     public class SJStringReaderBenchmark : SJReaderBenchmark<SJStringReader>
     {

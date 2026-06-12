@@ -79,7 +79,6 @@ namespace SJ
             for (int i = 0; i < content.Length; i++)
             {
                 char cur = content[i];
-                char next = (i < (content.Length - 1)) ? content[i + 1] : '\0';
                 if (cur < escapeTable.Length)
                 {
                     switch (escapeTable[cur])
@@ -91,13 +90,13 @@ namespace SJ
                             appendAction(self, '\\');
                             appendAction(self, (char)escapeTable[cur]);
                             count += 2;
-                            break;
+                            continue;
 
                         case EscapeTableAction.Self:
                             appendAction(self, '\\');
                             appendAction(self, cur);
                             count += 2;
-                            break;
+                            continue;
 
                         case EscapeTableAction.Hex:
                             // write as : \uXXXX
@@ -110,11 +109,12 @@ namespace SJ
                                 appendAction(self, hex[j]);
                                 count++;
                             }
-                            break;
+                            continue;
                     }
                 }
                 else if (asciiOnly)
                 {
+                    // Non-ascii
                     // write as : \uXXXX
                     To4DigitHex(cur, ref hex);
                     appendAction(self, '\\');
@@ -125,13 +125,13 @@ namespace SJ
                         appendAction(self, hex[j]);
                         count++;
                     }
+
+                    continue;
                 }
-                else
-                {
-                    // Range outside of ascii
-                    appendAction(self, cur);
-                    count++;
-                }
+
+                // Anything else
+                appendAction(self, cur);
+                count++;
             }
 
             return count;
@@ -224,7 +224,7 @@ namespace SJ
                                     {
                                         break;
                                     }
-                                    // Whether if digit is valid
+                                    // whether if digit is valid
                                     int digit = hex2IntTable[cur];
                                     if (digit == 0xFF)
                                     {
@@ -240,11 +240,14 @@ namespace SJ
                                     // UTF-16 point
                                     appendAction(self, (char)(result & char.MaxValue));
                                     count++;
+                                    // Go back to the previous character
+                                    i--;
                                 }
-                                // otherwise escape as is
+                                // otherwise escape \u as is
                                 else
                                 {
-                                    i -= TargetDelta; // i will be incremented beyond 'u'
+                                    i = start;
+
                                     appendAction(self, cur);
                                     count++;
                                 }

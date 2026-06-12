@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Buffers;
+using System.Xml.Linq;
 
 namespace SJ
 {
@@ -81,6 +82,11 @@ namespace SJ
             /// </summary>
             public int index;
             /// <summary>
+            /// Whether to skip the previous "non value" or "value" written with a newline before writing the seperator
+            /// </summary>
+            public bool skipBeforeSep;
+
+            /// <summary>
             /// Whether if this entry is valid or not.
             /// </summary>
             public readonly bool Valid => type != SJType.Error && type != SJType.End && index >= 0;
@@ -90,6 +96,7 @@ namespace SJ
             {
                 this.type = type;
                 index = 0;
+                skipBeforeSep = false;
             }
             public static implicit operator State(SJType type) => new State(type);
 
@@ -156,6 +163,10 @@ namespace SJ
         /// Maximum size for <see cref="writeStack"/>
         /// </summary>
         public int maxDepth = 128;
+        /// <summary>
+        /// Whether to allow any <see cref="WriteComment"/>.
+        /// </summary>
+        public bool canWriteComments = false;
         protected bool _ThrowOnError = false;
         /// <summary>
         /// When an erroreneous case occurs (or <see cref="Error"/> is set to anything other 
@@ -234,31 +245,21 @@ namespace SJ
             if (!HasState) throw new InvalidOperationException("Cannot peek state while there is no state.");
             return ref _stateStack[--depth];
         }
-        public State Top
-        {
-            get => PeekState();
-            set
-            {
-                ref State s = ref PeekState();
-                s = value;
-            }
-        }
 
         // This state doesn't need to be put into the write stack
         // as from what I see on JSON.parse, keys must be string, so there is no recursion on those
         // Though it has to be reset correctly in this case.
-        /// <summary>
-        /// 0 = none expected, 1 = key, 2 = value
-        /// </summary>
-        protected int kvState = 0;
-        /// <summary>
-        /// Need to write key in a key/value entry.
-        /// </summary>
-        public bool NeedKey => kvState == 1;
-        /// <summary>
-        /// Need to write value in a key/value entry.
-        /// </summary>
-        public bool NeedValue => kvState == 2;
+        [Flags]
+        public enum Expect { None, Key = 1 << 0, Colon = 1 << 1, Comma = 1 << 2 }
+        protected Expect expectState = Expect.None;
+        ///// <summary>
+        ///// Need to write key in a key/value entry.
+        ///// </summary>
+        //public bool NeedKey => (expectState & Expect.Key) == Expect.Key;
+        ///// <summary>
+        ///// Need to write value in a key/value entry.
+        ///// </summary>
+        //public bool NeedValue => (expectState & Expect.Value) == Expect.Value;
 
         /// <summary>
         /// Append to the underlying StringBuilder/Stream-like object.
@@ -302,7 +303,14 @@ namespace SJ
             }
             count += indentSize * depth;
         }
-        protected void WriteEscaped(ReadOnlySpan<char> data, bool asciiOnly)
+        protected void PrepareIndentLine(int depth)
+        {
+            Append('\n');
+            count++;
+
+            WriteIndent(depth);
+        }
+        protected virtual void WriteEscaped(ReadOnlySpan<char> data, bool asciiOnly)
         {
             count += SJEscape.Escape(this, selfAppend, data, asciiOnly);
         }
@@ -314,31 +322,41 @@ namespace SJ
                 return;
             }
 
-            if (Top.Valid)
+            ref State top = ref PeekState();
+            if (top.Valid)
             {
                 if (!NeedValue)
                 {
-                    if (Top.index > 0)
+                    if (top.skipBeforeSep && indentSize > 0)
+                    {
+                        PrepareIndentLine(depth);
+                    }
+                    if (top.index > 0)
                     {
                         Append(',');
                         count++;
                     }
-                    if (indentSize > 0)
+                    if (!top.skipBeforeSep && indentSize > 0)
                     {
-                        Append('\n');
-                        count++;
-
-                        WriteIndent(depth);
+                        PrepareIndentLine(depth);
                     }
+                    top.skipBeforeSep = false;
                 }
 
                 // keys shouldn't affect the write index as it's a pair
                 if (!NeedKey)
                 {
-                    var t = Top;
-                    t.index++;
-                    Top = t;
+                    top.index++;
                 }
+            }
+        }
+        protected void PrepareCommentValue(bool multiline, bool expectValue)
+        {
+            ref State top = ref PeekState();
+            if (top.Valid)
+            {
+                top.skipBeforeSep = !multiline;
+                PrepareIndentLine(depth);
             }
         }
         protected void PrepareEndValue(int prevIndex)
@@ -350,6 +368,27 @@ namespace SJ
 
                 WriteIndent(depth);
             }
+        }
+        protected bool UpdateCurrentState(bool wroteKey = false)
+        {
+            ref State top = ref PeekState();
+            if (top.Valid)
+            {
+                switch (top.type)
+                {
+                    case SJType.Object:
+                        expectState = wroteKey ? Expect.Comma : Expect.Key | Expect.Colon;
+                        break;
+                    case SJType.Array:
+                        expectState = Expect.Comma;
+                        break;
+                    default:
+                        Error = $"Invalid top level state {top.type}";
+                        return false;
+                }
+            }
+
+            return true;
         }
 
         public bool BeginObject()
@@ -377,7 +416,7 @@ namespace SJ
             PushState(SJType.Object);
 
             // Wait for a key
-            kvState = 1;
+            expectState = Expect.Key | Expect.Colon;
 
             return true;
         }
@@ -393,24 +432,26 @@ namespace SJ
                 Error = "Expected writing object value";
                 return false;
             }
-            if (!Top.Valid || Top.type != SJType.Object)
+            ref State top = ref PeekState();
+            if (!top.Valid || top.type != SJType.Object)
             {
-                Error = $"Invalid EndObject for toplevel with type '{Top.type}', expected Object";
+                Error = $"Invalid EndObject for toplevel with type '{top.type}', expected Object";
                 return false;
             }
 
             // Can end object
-            kvState = 0;
-            int prevIndex = Top.index;
+            expectState = 0;
+            int prevIndex = top.index;
             PopState();
+            top = ref PeekState();
 
             if (depth <= 0)
             {
                 finish = true;
             }
-            else if (Top.type == SJType.Object)
+            else if (top.type == SJType.Object)
             {
-                kvState = 1;
+                expectState = Expect.Key;
             }
 
             PrepareEndValue(prevIndex);
@@ -441,7 +482,7 @@ namespace SJ
             PrepareValue();
             Append('[');
             count++;
-            kvState = 0;
+            expectState = 0;
 
             PushState(SJType.Array);
             return true;
@@ -458,21 +499,24 @@ namespace SJ
                 Error = "Expected writing object key";
                 return false;
             }
-            if (!Top.Valid || Top.type != SJType.Array)
+            ref State top = ref PeekState();
+            if (!top.Valid || top.type != SJType.Array)
             {
-                Error = $"Invalid EndObject for toplevel with type '{Top.type}', expected Array";
+                Error = $"Invalid EndObject for toplevel with type '{top.type}', expected Array";
                 return false;
             }
 
-            int prevIndex = Top.index;
+            int prevIndex = top.index;
             PopState();
+            top = ref PeekState();
+
             if (depth <= 0)
             {
                 finish = true;
             }
-            else if (Top.type == SJType.Object)
+            else if (top.type == SJType.Object)
             {
-                kvState = 1;
+                expectState = Expect.Key | Expect.Colon;
             }
 
             PrepareEndValue(prevIndex);
@@ -493,6 +537,11 @@ namespace SJ
             ReadOnlySpan<char> name, bool asciiOnly = false
         )
         {
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return false;
+            }
             if (!NeedKey)
             {
                 Error = "Did not expect an object key";
@@ -513,7 +562,7 @@ namespace SJ
                 count++;
             }
 
-            kvState = 2;
+            expectState = Expect.Value;
 
             return true;
         }
@@ -548,16 +597,85 @@ namespace SJ
 
             if (depth <= 0)
             {
-                // Number is top level
+                // Value is top level
                 finish = true;
             }
-            else if (Top.type == SJType.Object)
+            else
             {
-                kvState = 1;
+
             }
 
             return true;
         }
+        /// <summary>
+        /// Write a comment for JSON, starting with /* and ending with */.
+        /// </summary>
+        /// <param name="data">Data inside the comment to write. It is padded with spaces by default.</param>
+        /// <param name="pad">Padding left and right character to use. Pass 0 to not pad the <paramref name="data"/> with anything.</param>
+        /// <param name="hasNextValue">
+        /// <br>To print "prettier", add a trailing comma or colon to the previous value. This will look nicer like</br>
+        /// <c><br>"value": // ...\n</br></c>
+        /// <br>instead of the usual <c>"value" // ...\n:</c></br>
+        /// <br><b>Set this <see langword="true"/> with caution, as you can produce invalid JSC with it.</b></br>
+        /// </param>
+        /// <returns>Whether if the write was successful.</returns>
+        public virtual bool WriteComment(ReadOnlySpan<char> data, char pad = ' ', bool hasNextValue = false)
+        {
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return false;
+            }
+            if (!canWriteComments)
+            {
+                Error = "Cannot write comments on this writer, enable canWriteComments";
+                return false;
+            }
+
+            PrepareCommentValue(true, hasNextValue);
+
+            Append("/*"); count += 2;
+            if (pad != 0) { Append(pad); count++; }
+            Append(data);
+            if (pad != 0) { Append(pad); count++; }
+            Append("/*"); count -= 2;
+
+            return true;
+        }
+        /// <summary>
+        /// Write a comment for JSON, starting with // and ending with newline character
+        /// </summary>
+        /// <param name="hasNextValue">
+        /// <br>To print "prettier", add a trailing comma or colon to the previous value. This will look nicer like</br>
+        /// <c><br>"value": // ...\n</br></c>
+        /// <br>instead of the usual <c>"value" // ...\n:</c></br>
+        /// <br><b>Set this <see langword="true"/> with caution, as you can produce invalid JSC with it.</b></br>
+        /// </param>
+        /// <param name="data">Data inside the comment to write. It is padded with spaces by default.</param>
+        /// <param name="prefixPad">Padding prefix character to use. Pass 0 to not pad the <paramref name="data"/> with anything.</param>
+        /// <returns>Whether if the write was successful.</returns>
+        public virtual bool WriteCommentLine(ReadOnlySpan<char> data, char prefixPad = ' ', bool hasNextValue = false)
+        {
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return false;
+            }
+            if (!canWriteComments)
+            {
+                Error = "Cannot write comments on this writer, enable canWriteComments";
+                return false;
+            }
+
+            PrepareCommentValue(false, hasNextValue);
+
+            Append("//"); count++;
+            if (prefixPad != 0) { Append(prefixPad); count++; }
+            Append(data);
+
+            return true;
+        }
+
         public bool WriteNumber(float number, string format = "R")
         {
             // number.ToString("G999") is totally reasonable and possible. So for floats, this is done.
@@ -636,9 +754,9 @@ namespace SJ
 
             return WriteLiteralValue(data.Slice(0, written));
         }
-        public bool WriteString(
-            ReadOnlySpan<char> value, bool asciiOnly = false
-        )
+        public bool WriteBool(bool value) => WriteLiteralValue(value ? "true" : "false");
+        public bool WriteNull() => WriteLiteralValue("null");
+        public bool WriteString(ReadOnlySpan<char> value, bool asciiOnly = false)
         {
             // This one does some things different enough that it can't be "WriteLiteral"
             if (finish)
@@ -666,15 +784,29 @@ namespace SJ
             {
                 finish = true;
             }
-            else if (Top.type == SJType.Object)
+            else
             {
-                kvState = 1;
+                ref State top = ref PeekState();
+                if (top.Valid)
+                {
+                    switch (top.type)
+                    {
+                        case SJType.Object:
+                            expectState = Expect.Key;
+                            break;
+                        case SJType.Array:
+                            expectState = Expect.Value;
+                            break;
+                        default:
+                            Error = $"Invalid top level state {top.type}";
+                            return false;
+                    }
+                }
             }
 
             return true;
         }
-        public bool WriteBool(bool value) => WriteLiteralValue(value ? "true" : "false");
-        public bool WriteNull() => WriteLiteralValue("null");
+
 
         // These are like "extensions"
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -813,13 +945,13 @@ namespace SJ
         /// <summary>
         /// Shows a simple preview of the current state.
         /// </summary>
-        public override string ToString() => $"[{base.ToString()}] count={count}, error={Error}, top={{{Top}}}";
+        public override string ToString() => $"[{base.ToString()}] count={count}, error={Error}, top={{{PeekState()}}}";
 
         public virtual void Reset()
         {
             count = 0;
             depth = 0;
-            kvState = 0;
+            expectState = 0;
             finish = false;
             Error = null;
         }

@@ -1,5 +1,4 @@
-﻿using SJ.Tests.Base;
-using System.Text;
+﻿using System.Text;
 using static SJ.Tests.TestData;
 
 namespace SJ.Tests;
@@ -26,17 +25,21 @@ public sealed class EscapeUnitTests
         }
     }
 
-    // Very long strings may cause problems.
-    public static IEnumerable<string[]> TruncatedDataProcessors => TestEx.CreateTruncatedDataProcessors([[EscapeContent], [EscapeInvalidSurrogate], [EscapeInvalidUnescape]]);
+    public static IEnumerable<string[]> DataProcessors => [[EscapeContent], [EscapeInvalidSurrogate], [EscapeContentAsciiSequence], [EscapeInvalidUnescape]];
+    public static IEnumerable<string[]> TruncatedDataProcessors => TestEx.CreateTruncatedDataProcessors(DataProcessors);
 
     [TestMethod]
-    [DynamicData(nameof(TruncatedDataProcessors))]
-    [DataRow(EscapeContentEmojiTest)]
+    [DataRow("")]
+    [DataRow(EscapeContent)]
+    [Timeout(TestTimeout.Short)]
+    public void TestBasic(string data) => TestEscapeUnescape(data);
+
+    [TestMethod]
+    [DynamicData(nameof(DataProcessors))]
     [Timeout(TestTimeout.Short)]
     public void TestWith(string data) => TestEscapeUnescape(data);
 
     [TestMethod]
-    [DataRow(EscapeContentEmojiTest)]
     [DynamicData(nameof(TruncatedDataProcessors))]
     [Timeout(TestTimeout.Short)]
     public void TestTruncated(string data) => TestEscapeUnescape(data);

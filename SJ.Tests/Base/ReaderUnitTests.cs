@@ -1,7 +1,6 @@
 ﻿using static SJ.Tests.TestData;
 using System.Text;
 using System.Reflection;
-using SJ.Tests.Base;
 
 namespace SJ.Tests;
 
