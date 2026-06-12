@@ -21,7 +21,7 @@ public static class WriterTester
             case SJType.Object:
                 {
                     // There isn't any checks for duplicate keys.. Be careful!
-                    if (writer.NeedValue)
+                    if ((writer.expect & SJWriter.Expect.Value) == SJWriter.Expect.Value)
                     {
                         Console.WriteLine($"The writer {writer} was expecting a value. Setting that key null.");
                         success = success && writer.WriteNull();
@@ -86,7 +86,7 @@ public static class WriterTester
                 }
             case SJType.Array:
                 {
-                    if (writer.NeedValue)
+                    if ((writer.expect & SJWriter.Expect.Value) == SJWriter.Expect.Value)
                     {
                         Console.WriteLine(
                             $"The writer {writer} was expecting a value." +

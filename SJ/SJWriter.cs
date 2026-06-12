@@ -247,19 +247,16 @@ namespace SJ
         }
 
         // This state doesn't need to be put into the write stack
-        // as from what I see on JSON.parse, keys must be string, so there is no recursion on those
-        // Though it has to be reset correctly in this case.
+        // as from what I see on JSON.parse, keys must be string and values can be ended with assumptions. (Key | Colon | Comma)
+        // The writer is a little bit more strict, but should be still careful.
+        // { => expectState = Key
+        //  "key": => expectState = Value
+        //   "value" => expectState = Key | Comma
+        // } => Can be placed while expectState == Key | Comma
+        // Comma to be expected after writing Value..
         [Flags]
-        public enum Expect { None, Key = 1 << 0, Colon = 1 << 1, Comma = 1 << 2 }
-        protected Expect expectState = Expect.None;
-        ///// <summary>
-        ///// Need to write key in a key/value entry.
-        ///// </summary>
-        //public bool NeedKey => (expectState & Expect.Key) == Expect.Key;
-        ///// <summary>
-        ///// Need to write value in a key/value entry.
-        ///// </summary>
-        //public bool NeedValue => (expectState & Expect.Value) == Expect.Value;
+        public enum Expect { None, Key = 1 << 0, Value = 1 << 1, Comma = 1 << 2 }
+        public Expect expect = Expect.None;
 
         /// <summary>
         /// Append to the underlying StringBuilder/Stream-like object.
@@ -303,16 +300,16 @@ namespace SJ
             }
             count += indentSize * depth;
         }
+        protected virtual void WriteEscaped(ReadOnlySpan<char> data, bool asciiOnly)
+        {
+            count += SJEscape.Escape(this, selfAppend, data, asciiOnly);
+        }
         protected void PrepareIndentLine(int depth)
         {
             Append('\n');
             count++;
 
             WriteIndent(depth);
-        }
-        protected virtual void WriteEscaped(ReadOnlySpan<char> data, bool asciiOnly)
-        {
-            count += SJEscape.Escape(this, selfAppend, data, asciiOnly);
         }
         protected void PrepareValue()
         {
@@ -325,7 +322,7 @@ namespace SJ
             ref State top = ref PeekState();
             if (top.Valid)
             {
-                if (!NeedValue)
+                if ((expect & Expect.Comma) == Expect.Comma)
                 {
                     if (top.skipBeforeSep && indentSize > 0)
                     {
@@ -335,6 +332,7 @@ namespace SJ
                     {
                         Append(',');
                         count++;
+                        expect &= ~Expect.Comma;
                     }
                     if (!top.skipBeforeSep && indentSize > 0)
                     {
@@ -342,9 +340,13 @@ namespace SJ
                     }
                     top.skipBeforeSep = false;
                 }
+                else if (indentSize > 0)
+                {
+                    PrepareIndentLine(depth);
+                }
 
                 // keys shouldn't affect the write index as it's a pair
-                if (!NeedKey)
+                if ((expect & Expect.Key) != Expect.Key)
                 {
                     top.index++;
                 }
@@ -355,7 +357,22 @@ namespace SJ
             ref State top = ref PeekState();
             if (top.Valid)
             {
-                top.skipBeforeSep = !multiline;
+                if (expectValue)
+                {
+                    if ((expect & Expect.Comma) == Expect.Comma)
+                    {
+                        Append(',');
+                        count++;
+                        expect &= ~Expect.Comma;
+                    }
+
+                    top.skipBeforeSep = false;
+                }
+                else
+                {
+                    top.skipBeforeSep = !multiline;
+                }
+
                 PrepareIndentLine(depth);
             }
         }
@@ -369,28 +386,6 @@ namespace SJ
                 WriteIndent(depth);
             }
         }
-        protected bool UpdateCurrentState(bool wroteKey = false)
-        {
-            ref State top = ref PeekState();
-            if (top.Valid)
-            {
-                switch (top.type)
-                {
-                    case SJType.Object:
-                        expectState = wroteKey ? Expect.Comma : Expect.Key | Expect.Colon;
-                        break;
-                    case SJType.Array:
-                        expectState = Expect.Comma;
-                        break;
-                    default:
-                        Error = $"Invalid top level state {top.type}";
-                        return false;
-                }
-            }
-
-            return true;
-        }
-
         public bool BeginObject()
         {
             if (finish)
@@ -398,7 +393,7 @@ namespace SJ
                 Error = "Attempt to write into a finished JSONWriter";
                 return false;
             }
-            if (NeedKey)
+            if ((expect & Expect.Key) == Expect.Key)
             {
                 Error = "Expected writing object key";
                 return false;
@@ -415,8 +410,8 @@ namespace SJ
 
             PushState(SJType.Object);
 
-            // Wait for a key
-            expectState = Expect.Key | Expect.Colon;
+            // Wait for a key. Since starting an object, 
+            expect = Expect.Key;
 
             return true;
         }
@@ -427,20 +422,26 @@ namespace SJ
                 Error = "Attempt to write into a finished JSONWriter";
                 return false;
             }
-            if (NeedValue)
-            {
-                Error = "Expected writing object value";
-                return false;
-            }
             ref State top = ref PeekState();
             if (!top.Valid || top.type != SJType.Object)
             {
                 Error = $"Invalid EndObject for toplevel with type '{top.type}', expected Object";
                 return false;
             }
+            if ((expect & Expect.Value) == Expect.Value)
+            {
+                Error = "Expected writing object value";
+                return false;
+            }
+            if ((expect & Expect.Key) != Expect.Key && (expect & Expect.Comma) != Expect.Comma)
+            {
+                Error = "Trailing comma written - the comment functions may cause this, if no end of content is specified.";
+                return false;
+            }
 
             // Can end object
-            expectState = 0;
+            expect = Expect.None;
+
             int prevIndex = top.index;
             PopState();
             top = ref PeekState();
@@ -451,7 +452,7 @@ namespace SJ
             }
             else if (top.type == SJType.Object)
             {
-                expectState = Expect.Key;
+                expect = Expect.Key;
             }
 
             PrepareEndValue(prevIndex);
@@ -468,7 +469,7 @@ namespace SJ
                 Error = "Attempt to write into a finished JSONWriter";
                 return false;
             }
-            if (NeedKey)
+            if ((expect & Expect.Key) == Expect.Key)
             {
                 Error = "Expected writing object key";
                 return false;
@@ -482,7 +483,7 @@ namespace SJ
             PrepareValue();
             Append('[');
             count++;
-            expectState = 0;
+            expect = Expect.None;
 
             PushState(SJType.Array);
             return true;
@@ -494,9 +495,16 @@ namespace SJ
                 Error = "Attempt to write into a finished JSONWriter";
                 return false;
             }
-            if (NeedKey)
+            if ((expect & Expect.Key) == Expect.Key)
             {
                 Error = "Expected writing object key";
+                return false;
+            }
+            if ((expect & Expect.Comma) != Expect.Comma)
+            {
+                // We are write only. In future I may add record the last comma,
+                // roll back until it, replace it with whitespace and then proceed.
+                Error = "Trailing comma written - the comment functions may cause this, if no end of content is specified.";
                 return false;
             }
             ref State top = ref PeekState();
@@ -505,6 +513,8 @@ namespace SJ
                 Error = $"Invalid EndObject for toplevel with type '{top.type}', expected Array";
                 return false;
             }
+
+            expect = Expect.None;
 
             int prevIndex = top.index;
             PopState();
@@ -516,7 +526,7 @@ namespace SJ
             }
             else if (top.type == SJType.Object)
             {
-                expectState = Expect.Key | Expect.Colon;
+                expect = Expect.Key;
             }
 
             PrepareEndValue(prevIndex);
@@ -542,7 +552,7 @@ namespace SJ
                 Error = "Attempt to write into a finished JSONWriter";
                 return false;
             }
-            if (!NeedKey)
+            if ((expect & Expect.Key) != Expect.Key)
             {
                 Error = "Did not expect an object key";
                 return false;
@@ -562,7 +572,7 @@ namespace SJ
                 count++;
             }
 
-            expectState = Expect.Value;
+            expect = Expect.Value;
 
             return true;
         }
@@ -584,7 +594,7 @@ namespace SJ
                 Error = "Attempt to write into a finished JSONWriter";
                 return false;
             }
-            if (NeedKey)
+            if ((expect & Expect.Key) == Expect.Key)
             {
                 Error = "Expected writing object key, got WriteLiteral";
                 return false;
@@ -602,7 +612,19 @@ namespace SJ
             }
             else
             {
-
+                var t = PeekState().type;
+                switch (t)
+                {
+                    case SJType.Object:
+                        expect = Expect.Key | Expect.Comma;
+                        break;
+                    case SJType.Array:
+                        expect = Expect.Value | Expect.Comma;
+                        break;
+                    default:
+                        Error = $"Invalid top level type {t}";
+                        return false;
+                }
             }
 
             return true;
@@ -764,7 +786,7 @@ namespace SJ
                 Error = "Attempt to write into a finished JSONWriter";
                 return false;
             }
-            if (NeedKey)
+            if ((expect & Expect.Key) == Expect.Key)
             {
                 // eh sure, works, similar intent
                 return WriteKey(value, asciiOnly);
@@ -786,21 +808,18 @@ namespace SJ
             }
             else
             {
-                ref State top = ref PeekState();
-                if (top.Valid)
+                var t = PeekState().type;
+                switch (t)
                 {
-                    switch (top.type)
-                    {
-                        case SJType.Object:
-                            expectState = Expect.Key;
-                            break;
-                        case SJType.Array:
-                            expectState = Expect.Value;
-                            break;
-                        default:
-                            Error = $"Invalid top level state {top.type}";
-                            return false;
-                    }
+                    case SJType.Object:
+                        expect = Expect.Key | Expect.Comma;
+                        break;
+                    case SJType.Array:
+                        expect = Expect.Value | Expect.Comma;
+                        break;
+                    default:
+                        Error = $"Invalid top level type {t}";
+                        return false;
                 }
             }
 
@@ -951,7 +970,7 @@ namespace SJ
         {
             count = 0;
             depth = 0;
-            expectState = 0;
+            expect = 0;
             finish = false;
             Error = null;
         }
