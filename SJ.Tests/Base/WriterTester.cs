@@ -4,6 +4,69 @@ namespace SJ.Tests;
 
 public static class WriterTester
 {
+    // Technically, could be a "fluent" extension that takes "object"
+    public readonly struct WriteOptions(object value, WriteOptions.Type type)
+    {
+        public enum Type
+        {
+            None,
+            Format,
+            Ascii,
+
+            // ??
+            Custom
+        }
+
+        public readonly object value = value;
+        public readonly Type type = type;
+
+        public static WriteOptions Format(string format)
+        {
+            return new WriteOptions(format, Type.Format);
+        }
+        public static WriteOptions Ascii(bool ascii)
+        {
+            return new WriteOptions(ascii, Type.Ascii);
+        }
+    }
+    public static bool Write(this SJWriter writer, object? value, params WriteOptions[] ws)
+    {
+        ArgumentNullException.ThrowIfNull(writer, nameof(writer));
+        bool prevAsciiOnly = writer.asciiOnly;
+        try
+        {
+            var asciiOpt = ws.FirstOrDefault(v => v.type == WriteOptions.Type.Ascii);
+            if (asciiOpt.type == WriteOptions.Type.Ascii) writer.asciiOnly = Convert.ToBoolean(asciiOpt.value);
+
+            string fmt = "";
+            var fmtOpt = ws.FirstOrDefault(v => v.type == WriteOptions.Type.Format);
+            if (fmtOpt.type == WriteOptions.Type.Format) fmt = Convert.ToString(fmtOpt.value)!;
+
+            // common
+            if (value is null) return writer.WriteNull();
+            else if (value is string str) return writer.WriteString(str);
+            else if (value is uint ui) return !string.IsNullOrEmpty(fmt) ? writer.WriteULong(ui, fmt) : writer.WriteULong(ui);
+            else if (value is int i) return !string.IsNullOrEmpty(fmt) ? writer.WriteLong(i, fmt) : writer.WriteLong(i);
+            else if (value is double d) return !string.IsNullOrEmpty(fmt) ? writer.WriteNumber(d, fmt) : writer.WriteNumber(d);
+            else if (value is float f) return !string.IsNullOrEmpty(fmt) ? writer.WriteNumber(f, fmt) : writer.WriteNumber(f);
+            else if (value is bool @bool) return writer.WriteBool(@bool);
+            // less common
+            else if (value is ulong ul) return !string.IsNullOrEmpty(fmt) ? writer.WriteULong(ul, fmt) : writer.WriteULong(ul);
+            else if (value is long l) return !string.IsNullOrEmpty(fmt) ? writer.WriteLong(l, fmt) : writer.WriteLong(l);
+            else if (value is ushort us) return !string.IsNullOrEmpty(fmt) ? writer.WriteULong(us, fmt) : writer.WriteULong(us);
+            else if (value is short s) return !string.IsNullOrEmpty(fmt) ? writer.WriteLong(s, fmt) : writer.WriteLong(s);
+            else if (value is byte b) return !string.IsNullOrEmpty(fmt) ? writer.WriteULong(b, fmt) : writer.WriteULong(b);
+            else if (value is sbyte sb) return !string.IsNullOrEmpty(fmt) ? writer.WriteLong(sb, fmt) : writer.WriteLong(sb);
+            // else if (value is ReadOnlySpan<char> c) return writer.WriteString(str); // must be where T : allows ref struct
+            // + upper values can't be matched with "is"
+            else throw new ArgumentException($"Value with type {value.GetType()} does not have a supported method on writer", nameof(value));
+        }
+        finally
+        {
+            writer.asciiOnly = prevAsciiOnly;
+        }
+    }
+
     public static bool WriteTest(SJWriter writer)
     {
         ArgumentNullException.ThrowIfNull(writer);
@@ -163,187 +226,124 @@ public static class WriterTester
     {
         ArgumentNullException.ThrowIfNull(writer);
 
-        void WriterDataEquals(string s)
+        void WrittenEquals<T>(T? v, string s, params WriteOptions[] ws)
         {
-            if (!writer.CanReadData)
+            foreach (var newlineAfterMl in new[] { true, false })
             {
-                Assert.Inconclusive($"[!] Cannot TestRootWith on writer type '{writer.GetType().AssemblyQualifiedName}' as data can't be read. Comparison was for '{s}'");
+                writer.Write(v, ws: ws);
+                if (!writer.CanReadData)
+                {
+                    Assert.Inconclusive($"[!] Cannot TestRootWith on writer type '{writer.GetType().AssemblyQualifiedName}' as data can't be read. Comparison expected was for string : '{s}'");
+                }
+                Assert.AreEqual(s, writer.ReadData());
+                WriteMustFailAfter(writer);
+                writer.Reset();
             }
 
-            Assert.AreEqual(s, writer.ReadData());
+            writer.Reset();
         }
 
         // Root level writes
-        writer.Write(true);
-        WriterDataEquals("true");
-        WriteMustFailAfter(writer);
-        writer.Reset();
-
-        writer.Write(false);
-        WriterDataEquals("false");
-        WriteMustFailAfter(writer);
-        writer.Reset();
-
-        writer.WriteNull();
-        WriterDataEquals("null");
-        WriteMustFailAfter(writer);
-        writer.Reset();
-
-        writer.Write(null);
-        WriterDataEquals("null");
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        WrittenEquals(true, "true");
+        WrittenEquals(false, "false");
+        WrittenEquals<object>(null, "null");
 
         const string IntFmt = "G";
         const string FloatFmt = "R";
         var numberCulture = CultureInfo.InvariantCulture;
 
         const int IntVal = 676767;
-        writer.Write(IntVal, IntFmt);
-        WriterDataEquals(IntVal.ToString(IntFmt));
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        WrittenEquals(IntVal, IntVal.ToString(IntFmt, numberCulture), WriteOptions.Format(IntFmt));
 
         const long LongVal = 1234123412341234123L;
-        writer.Write(LongVal, IntFmt);
-        WriterDataEquals(LongVal.ToString(IntFmt, numberCulture));
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        WrittenEquals(LongVal, LongVal.ToString(IntFmt, numberCulture), WriteOptions.Format(IntFmt));
 
         const ulong ULongVal = 12341234123412341234UL;
-        writer.Write(ULongVal, IntFmt);
-        WriterDataEquals(ULongVal.ToString(IntFmt, numberCulture));
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        WrittenEquals(ULongVal, ULongVal.ToString(IntFmt, numberCulture), WriteOptions.Format(IntFmt));
 
-        // Floating point numbers are somewhat indeterminate, so use the same format and hope for the best.
-        // Note : Writer used to write floats using double, but now it writes using float type (so that the rounding is same).
-        //        So the ToString behaviour should be same.
         const float FloatVal = 1.234f;
-        writer.Write(FloatVal, FloatFmt);
-        WriterDataEquals(FloatVal.ToString(FloatFmt, numberCulture));
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        WrittenEquals(FloatVal, FloatVal.ToString(FloatFmt, numberCulture), WriteOptions.Format(FloatFmt));
 
         const double DoubleVal = 0.1d + 0.2d;
-        writer.Write(DoubleVal, FloatFmt);
-        WriterDataEquals(DoubleVal.ToString(FloatFmt, numberCulture));
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        WrittenEquals(DoubleVal, DoubleVal.ToString(FloatFmt, numberCulture), WriteOptions.Format(FloatFmt));
 
         // Well I didn't know this was possible
         const string DoubleFmt = "G999";
-        writer.Write(double.MaxValue, DoubleFmt);
-        WriterDataEquals(double.MaxValue.ToString(DoubleFmt, numberCulture));
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        WrittenEquals(DoubleVal, DoubleVal.ToString(DoubleFmt, numberCulture), WriteOptions.Format(DoubleFmt));
 
         // Generally, the test content isn't escaped (it's written as is)
-        // The escaping is "tested", so I will not test that.
+        // The escaping is "tested", so I will not test that..
         const string TestContent = "Quote: \", Backslash: \\, Tab: \t, Newline: \n, Pizza: \uD83C\uDF55, The 🅱 variant: \uD83C\uDD71\uFE0F";
-        writer.Write(TestContent);
-        WriterDataEquals($"\"{SJEscape.Escape(TestContent)}\"");
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        foreach (var asciiOnly in new[] { false, true })
+        {
+            WrittenEquals(TestContent, $"\"{SJEscape.Escape(TestContent, asciiOnly)}\"", WriteOptions.Ascii(asciiOnly));
+        }
     }
     public static void WriteTestRootJSC(SJWriter writer)
     {
         ArgumentNullException.ThrowIfNull(writer);
 
-        void WriterDataEquals(string s)
+        const char Pad = ' '; // PAD MUST NOT BE '\0', '\r' or '\n'. This is tested in the WriterUnitTests
+        const string C1 = "CommentLine", C2 = "Comment ML", C3 = "Last Comment Line";
+        void WrittenEquals<T>(T? v, string s, params WriteOptions[] ws)
         {
-            if (!writer.CanReadData)
+            foreach (var nl in new[] { false, true })
             {
-                Assert.Inconclusive($"[!] Cannot TestRootWith on writer type '{writer.GetType().AssemblyQualifiedName}' as data can't be read. Comparison was for '{s}'");
+                writer.WriteCommentLine(C1, Pad);
+                writer.Write(v, ws: ws);
+                writer.WriteComment(C2, Pad, newlineImmediately: nl);
+                writer.WriteCommentLine(C3, Pad);
+                if (!writer.CanReadData)
+                {
+                    Assert.Inconclusive($"[!] Cannot TestRootWith on writer type '{writer.GetType().AssemblyQualifiedName}' as data can't be read. Comparison expected was for string : '{s}'");
+                }
+
+                // Depth=0 writes now work like "pretty print", if printing line.
+                Assert.AreEqual($"//{Pad}{C1}\n{s}\n/*{Pad}{C2}{Pad}*/{(writer.indentSize > 0 ? "\n" : "")}//{Pad}{C3}", writer.ReadData());
+                WriteMustFailAfter(writer);
+                writer.Reset();
             }
 
-            Assert.AreEqual(s, writer.ReadData());
+            writer.Reset();
         }
 
         writer.indentSize = 4;
         writer.allowComments = true;
 
-        const char Pad = ' ';
-        const string C1 = "CommentLine", C2 = "Comment ML", C3 = "Last Comment Line"; 
         // Root level writes
-        writer.WriteCommentLine(C1, Pad);
-        writer.Write(true);
-        writer.WriteComment(C2, Pad);
-        writer.WriteCommentLine(C3, Pad);
-        WriterDataEquals($"//{Pad}{C1}\ntrue/*{Pad}{C2}{Pad}*/\n//{Pad}{C3}");
-        // Current fault is the fact that the comment line preparation does not newline
-        // But I also realize single line must just new line and not expect new newline to be prepared, because I'm not even tracking that state(?)
-        // Perhaps this will get redesigned again just like the Reader redesign in 2.x
-        WriteMustFailAfter(writer);
-        writer.Reset();
-
-        /*
-        writer.Write(false);
-        WriterDataEquals("false");
-        WriteMustFailAfter(writer);
-        writer.Reset();
-
-        writer.WriteNull();
-        WriterDataEquals("null");
-        WriteMustFailAfter(writer);
-        writer.Reset();
-
-        writer.Write(null);
-        WriterDataEquals("null");
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        WrittenEquals(true, "true");
+        WrittenEquals(false, "false");
+        WrittenEquals<object>(null, "null");
 
         const string IntFmt = "G";
         const string FloatFmt = "R";
         var numberCulture = CultureInfo.InvariantCulture;
 
         const int IntVal = 676767;
-        writer.Write(IntVal, IntFmt);
-        WriterDataEquals(IntVal.ToString(IntFmt));
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        WrittenEquals(IntVal, IntVal.ToString(IntFmt, numberCulture), WriteOptions.Format(IntFmt));
 
         const long LongVal = 1234123412341234123L;
-        writer.Write(LongVal, IntFmt);
-        WriterDataEquals(LongVal.ToString(IntFmt, numberCulture));
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        WrittenEquals(LongVal, LongVal.ToString(IntFmt, numberCulture), WriteOptions.Format(IntFmt));
 
         const ulong ULongVal = 12341234123412341234UL;
-        writer.Write(ULongVal, IntFmt);
-        WriterDataEquals(ULongVal.ToString(IntFmt, numberCulture));
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        WrittenEquals(ULongVal, ULongVal.ToString(IntFmt, numberCulture), WriteOptions.Format(IntFmt));
 
-        // Floating point numbers are somewhat indeterminate, so use the same format and hope for the best.
-        // Note : Writer used to write floats using double, but now it writes using float type (so that the rounding is same).
-        //        So the ToString behaviour should be same.
         const float FloatVal = 1.234f;
-        writer.Write(FloatVal, FloatFmt);
-        WriterDataEquals(FloatVal.ToString(FloatFmt, numberCulture));
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        WrittenEquals(FloatVal, FloatVal.ToString(FloatFmt, numberCulture), WriteOptions.Format(FloatFmt));
 
         const double DoubleVal = 0.1d + 0.2d;
-        writer.Write(DoubleVal, FloatFmt);
-        WriterDataEquals(DoubleVal.ToString(FloatFmt, numberCulture));
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        WrittenEquals(DoubleVal, DoubleVal.ToString(FloatFmt, numberCulture), WriteOptions.Format(FloatFmt));
 
         // Well I didn't know this was possible
         const string DoubleFmt = "G999";
-        writer.Write(double.MaxValue, DoubleFmt);
-        WriterDataEquals(double.MaxValue.ToString(DoubleFmt, numberCulture));
-        WriteMustFailAfter(writer);
-        writer.Reset();
+        WrittenEquals(DoubleVal, DoubleVal.ToString(DoubleFmt, numberCulture), WriteOptions.Format(DoubleFmt));
 
         // Generally, the test content isn't escaped (it's written as is)
-        // The escaping is "tested", so I will not test that.
+        // The escaping is "tested", so I will not test that..
         const string TestContent = "Quote: \", Backslash: \\, Tab: \t, Newline: \n, Pizza: \uD83C\uDF55, The 🅱 variant: \uD83C\uDD71\uFE0F";
-        writer.Write(TestContent);
-        WriterDataEquals($"\"{SJEscape.Escape(TestContent)}\"");
-        WriteMustFailAfter(writer);
-        writer.Reset();
-        */
+        foreach (var asciiOnly in new[] { false, true })
+        {
+            WrittenEquals(TestContent, $"\"{SJEscape.Escape(TestContent, asciiOnly)}\"", WriteOptions.Ascii(asciiOnly));
+        }
     }
 }

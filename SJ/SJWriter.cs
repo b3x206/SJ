@@ -245,21 +245,12 @@ namespace SJ
             if (!HasState) throw new InvalidOperationException("Cannot peek state while there is no state.");
             return ref _stateStack[--depth];
         }
-
-        // This state doesn't need to be put into the write stack
-        // as from what I see on JSON.parse, keys must be string and values can be ended with assumptions. (Key | Colon | Comma)
-        // The writer is a little bit more strict, but should be still careful.
-        // { => expectState = Key
-        //  "key": => expectState = Value
-        //   "value" => expectState = Key | Comma
-        // } => Can be placed while expectState == Key | Comma
-        // Comma to be expected after writing Value..
         [Flags]
         public enum Expect { None, Key = 1 << 0, Value = 1 << 1, Comma = 1 << 2 }
         public Expect expect = Expect.None;
         [Flags]
-        public enum FormatExpect { None, Newline = 1 << 0, Indent = 1 << 1, IndentedLine = Newline | Indent }
-        public FormatExpect fmtExpect = FormatExpect.None;
+        public enum FormatExpect { None, Newline = 1 << 0, Indent = 1 << 1, NewlineIndent = Newline | Indent }
+        public FormatExpect fmtExpect = FormatExpect.None; // Newline is done first, then indent.
 
         /// <summary>
         /// Append to the underlying StringBuilder/Stream-like object.
@@ -310,6 +301,13 @@ namespace SJ
         protected void PrepareFormat()
         {
             if (fmtExpect == FormatExpect.None) return;
+            if (indentSize <= 0)
+            {
+                // On zero depth, newlines are allowed again for "single line comment" related reasons.
+                if (depth <= 0 && (fmtExpect & FormatExpect.Newline) == FormatExpect.Newline) { Append('\n'); count++; }
+                fmtExpect = FormatExpect.None;
+                return;
+            }
 
             if ((fmtExpect & FormatExpect.Newline) == FormatExpect.Newline) { Append('\n'); count++; }
             if ((fmtExpect & FormatExpect.Indent) == FormatExpect.Indent) { WriteIndent(depth); }
@@ -327,9 +325,7 @@ namespace SJ
             ref State top = ref PeekState();
             if (top.Valid)
             {
-                PrepareFormat();
-
-                if (top.index > 0)
+                if ((expect & Expect.Comma) == Expect.Comma && top.index > 0)
                 {
                     Append(',');
                     count++;
@@ -342,35 +338,23 @@ namespace SJ
                     top.index++;
                 }
             }
+
+            // Do this regardless of depth now
+            PrepareFormat();
         }
-        protected void PostValue()
+        protected void PrepareCommentValue(bool expectValue)
         {
-            // TODO : Update state depending on something..
-        }
-        protected void PrepareCommentValue(bool multiline, bool expectValue)
-        {
-            ref State top = ref PeekState();
-            if (top.Valid)
+            if (expectValue && depth > 0)
             {
-                if (expectValue)
+                if ((expect & Expect.Comma) == Expect.Comma)
                 {
-                    if ((expect & Expect.Comma) == Expect.Comma)
-                    {
-                        Append(',');
-                        count++;
-                        expect &= ~Expect.Comma;
-                    }
-
-                    top.newlineBeforeIndent = false;
+                    Append(',');
+                    count++;
+                    expect &= ~Expect.Comma;
                 }
-                else
-                {
-                    // Single line comments should have next value with comma prefixed.
-                    top.newlineBeforeIndent = !multiline;
-                }
-
-                PrepareIndentLine(depth);
             }
+
+            PrepareFormat();
         }
         protected void PrepareEndValue(int prevIndex)
         {
@@ -380,6 +364,8 @@ namespace SJ
                 count++;
 
                 WriteIndent(depth);
+
+                fmtExpect = FormatExpect.None;
             }
         }
 
@@ -408,7 +394,7 @@ namespace SJ
             PushState(SJType.Object);
 
             expect = Expect.Key;
-            fmtExpect = FormatExpect.IndentedLine;
+            fmtExpect = FormatExpect.NewlineIndent;
 
             return true;
         }
@@ -465,7 +451,7 @@ namespace SJ
             }
 
             PrepareEndValue(prevIndex);
-            fmtExpect = FormatExpect.IndentedLine;
+            fmtExpect = FormatExpect.NewlineIndent;
 
             Append('}');
             count++;
@@ -495,7 +481,7 @@ namespace SJ
             count++;
 
             expect = Expect.None;
-            fmtExpect = FormatExpect.IndentedLine;
+            fmtExpect = FormatExpect.NewlineIndent;
 
             PushState(SJType.Array);
             return true;
@@ -554,7 +540,7 @@ namespace SJ
             }
 
             PrepareEndValue(prevIndex);
-            fmtExpect = FormatExpect.IndentedLine;
+            fmtExpect = FormatExpect.NewlineIndent;
 
             Append(']');
             count++;
@@ -628,7 +614,6 @@ namespace SJ
 
             Append(data);
             count += data.Length;
-            fmtExpect = FormatExpect.IndentedLine;
 
             if (depth <= 0)
             {
@@ -651,6 +636,7 @@ namespace SJ
                         return false;
                 }
             }
+            fmtExpect = FormatExpect.NewlineIndent;
 
             return true;
         }
@@ -665,8 +651,9 @@ namespace SJ
         /// <br>instead of the usual <c>"value" // ...\n:</c></br>
         /// <br><b>Set this <see langword="true"/> with caution, as you can produce invalid JSC with it.</b></br>
         /// </param>
+        /// <param name="newlineImmediately">Append a \n character after writing multiline comment. Only works with pretty printing.</param>
         /// <returns>Whether if the write was successful.</returns>
-        public virtual bool WriteComment(ReadOnlySpan<char> data, char pad = ' ', bool hasNextValue = false)
+        public virtual bool WriteComment(ReadOnlySpan<char> data, char pad = ' ', bool hasNextValue = false, bool newlineImmediately = false)
         {
             if (!allowComments)
             {
@@ -674,16 +661,36 @@ namespace SJ
                 return false;
             }
 
-            PrepareCommentValue(multiline: true, hasNextValue);
+            PrepareCommentValue(hasNextValue);
 
             Append("/*"); count += 2;
-            if (pad != 0) { Append(pad); count++; }
-            Append(data);
-            if (pad != 0) { Append(pad); count++; }
+            for (int i = -1; i <= data.Length; i++)
+            {
+                if (i < 0 || i >= data.Length)
+                {
+                    if (pad != 0 && pad != '\r' && pad != '\n') { Append(pad); count++; }
+                    continue;
+                }
+
+                char c = data[i];
+                Append(c); count++;
+                if (c == '\n')
+                {
+                    WriteIndent(depth);
+                }
+            }
             Append("*/"); count += 2;
 
-            // Move into seperate line if possible
-            fmtExpect = FormatExpect.IndentedLine;
+            fmtExpect = FormatExpect.None;
+            if (indentSize > 0)
+            {
+                fmtExpect = FormatExpect.NewlineIndent;
+                if (newlineImmediately)
+                {
+                    Append('\n'); count++;
+                    fmtExpect &= ~FormatExpect.Newline;
+                }
+            }
 
             return true;
         }
@@ -715,28 +722,27 @@ namespace SJ
                 return WriteComment(data, prefixPad, hasNextValue);
             }
 
-            PrepareCommentValue(multiline: false, hasNextValue);
+            PrepareCommentValue(hasNextValue);
 
             Append("//"); count += 2;
-            if (prefixPad != 0 && prefixPad != '\r' && prefixPad != '\n') { Append(prefixPad); count++; }
-            // Data must be checked for '\n'
-            for (int i = 0; i < data.Length; i++)
+            for (int i = -1; i < data.Length; i++)
             {
-                char c = data[i];
-                if (c == '\n')
+                if (i < 0)
                 {
-                    Append(c); count++;
-                    WriteIndent(depth);
-                    Append("//"); count += 2;
                     if (prefixPad != 0 && prefixPad != '\r' && prefixPad != '\n') { Append(prefixPad); count++; }
                     continue;
                 }
 
+                char c = data[i];
                 Append(c); count++;
+                if (c == '\n')
+                {
+                    WriteIndent(depth);
+                    Append("//"); count += 2;
+                    if (prefixPad != 0 && prefixPad != '\r' && prefixPad != '\n') { Append(prefixPad); count++; }
+                }
             }
-            // Comment lines should be new lined regardless
-            Append('\n'); count++;
-            fmtExpect = FormatExpect.Indent;
+            fmtExpect = FormatExpect.NewlineIndent;
 
             return true;
         }
@@ -784,6 +790,7 @@ namespace SJ
                         return false;
                 }
             }
+            fmtExpect = FormatExpect.NewlineIndent;
 
             return true;
         }
@@ -1011,7 +1018,8 @@ namespace SJ
         {
             count = 0;
             depth = 0;
-            expect = 0;
+            expect = Expect.None;
+            fmtExpect = FormatExpect.None;
             finish = false;
             Error = null;
         }

@@ -10,7 +10,7 @@ public sealed class EscapeUnitTests
     {
         var sb = new StringBuilder(content.Length * 2);
         var sbUnescaped = new StringBuilder(content.Length);
-        foreach (var asciiOnly in new bool[] { false, true })
+        foreach (var asciiOnly in new[] { false, true })
         {
             sb.Clear(); sbUnescaped.Clear(); // Clear to avoid invalid length
 

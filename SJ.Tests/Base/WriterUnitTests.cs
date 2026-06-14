@@ -1,6 +1,4 @@
-﻿using static SJ.Tests.WriterTester;
-
-namespace SJ.Tests;
+﻿namespace SJ.Tests;
 
 [TestClass]
 public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
@@ -41,11 +39,11 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             writer.ThrowOnError = true;
             using (writer.Object())
             {
-                Assert.IsTrue(WriteTest(writer), "Writing must go without any errors");
+                Assert.IsTrue(WriterTester.WriteTest(writer), "Writing must go without any errors");
 
                 using (writer.ArrayKV("array"))
                 {
-                    Assert.IsTrue(WriteTest(writer), "Writing must go without any errors");
+                    Assert.IsTrue(WriterTester.WriteTest(writer), "Writing must go without any errors");
                 }
             }
 
@@ -80,7 +78,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             writer.ThrowOnError = true;
             using (writer.Object())
             {
-                WriteTest(writer);
+                WriterTester.WriteTest(writer);
             }
 
             firstDisposeValid = DisposeWriter(writer);
@@ -143,6 +141,46 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             DisposeWriter(writer);
         }
     }
+    [TestMethod]
+    [Timeout(TestTimeout.Short)]
+    public void TestJSCPadCharacters()
+    {
+        var writer = CreateWriter();
+        try
+        {
+            const string Comment = "Hello world!";
+
+            writer.allowComments = true;
+            foreach (var invalidPadChar in new[] { '\0', '\r', '\n' })
+            {
+                string InvalidPadMessage = $"Invalid pad char '{(int)invalidPadChar}' must be ignored, unless that's a feature (no).";
+
+                writer.Reset();
+                writer.WriteComment(Comment, invalidPadChar);
+                Assert.AreEqual($"/*{Comment}*/", writer.ReadData(), InvalidPadMessage);
+
+                writer.Reset();
+                writer.WriteCommentLine(Comment, invalidPadChar);
+                Assert.AreEqual($"//{Comment}", writer.ReadData(), InvalidPadMessage);
+            }
+            foreach (var validPadChar in Enumerable.Range(1, 127).Where(v => v != '\r' && v != '\n').Select(Convert.ToChar))
+            {
+                string ValidPadMessage = $"Valid pad char '{(int)validPadChar}' must be written";
+
+                writer.Reset();
+                writer.WriteComment(Comment, validPadChar);
+                Assert.AreEqual($"/*{validPadChar}{Comment}{validPadChar}*/", writer.ReadData(), ValidPadMessage);
+
+                writer.Reset();
+                writer.WriteCommentLine(Comment, validPadChar);
+                Assert.AreEqual($"//{validPadChar}{Comment}", writer.ReadData(), ValidPadMessage);
+            }
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
 
     [TestMethod]
     [Timeout(TestTimeout.Short)]
@@ -156,7 +194,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             writer.indentSize = indent;
             writer.ThrowOnError = false;
 
-            WriteTestRoot(writer);
+            WriterTester.WriteTestRoot(writer);
         }
         finally
         {
@@ -179,11 +217,11 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             using (writer.Object())
             {
                 // Though ThrowOnError is true, so :shrug:
-                Assert.IsTrue(WriteTest(writer), "Writing must go without any errors");
+                Assert.IsTrue(WriterTester.WriteTest(writer), "Writing must go without any errors");
 
                 using (writer.ArrayKV("test on le array"))
                 {
-                    Assert.IsTrue(WriteTest(writer), "Writing must go without any errors");
+                    Assert.IsTrue(WriterTester.WriteTest(writer), "Writing must go without any errors");
                 }
             }
 
@@ -220,7 +258,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             writer.ThrowOnError = false;
             writer.allowComments = true;
 
-            WriteTestRootJSC(writer);
+            WriterTester.WriteTestRootJSC(writer);
         }
         finally
         {
@@ -262,7 +300,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             writer.ThrowOnError = true;
 
             writer.maxDepth = 128;
-            Assert.IsFalse(WriteTestDepth(writer, 64));
+            Assert.IsFalse(WriterTester.WriteTestDepth(writer, 64));
         }
         finally
         {
@@ -280,7 +318,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             writer.indentSize = 4;
             writer.ThrowOnError = true;
 
-            Assert.IsTrue(WriteMaxTestDepth(writer), "Depth test must fail"); // ← Must throw WriteException instead
+            Assert.IsTrue(WriterTester.WriteMaxTestDepth(writer), "Depth test must fail"); // ← Must throw WriteException instead
             Console.WriteLine($"fail : {writer}");
         }
         finally
@@ -298,7 +336,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             writer.indentSize = 4;
             writer.ThrowOnError = false;
 
-            Assert.IsTrue(WriteMaxTestDepth(writer), "Depth test must fail");
+            Assert.IsTrue(WriterTester.WriteMaxTestDepth(writer), "Depth test must fail");
             Assert.That.IsNotNullOrEmpty(writer.Error, "Writer should have an error set after failing");
         }
         finally
