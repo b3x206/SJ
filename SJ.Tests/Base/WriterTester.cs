@@ -1,10 +1,13 @@
-﻿using System.Globalization;
+﻿using System.Collections.Specialized;
+using System.Globalization;
 
 namespace SJ.Tests;
 
 public static class WriterTester
 {
-    // Technically, could be a "fluent" extension that takes "object"
+    // - Extensions
+    // Technically, could be a "fluent" extension that takes "object".
+    // > But that is out of scope, BXSave will have these natively instead of the core lib authored as a submodule..
     public readonly struct WriteOptions(object value, WriteOptions.Type type)
     {
         public enum Type
@@ -28,6 +31,8 @@ public static class WriterTester
         {
             return new WriteOptions(ascii, Type.Ascii);
         }
+
+        public static readonly WriteOptions[] TestConfigs = [Format("G"), Format("R"), Ascii(false), Ascii(true)];
     }
     public static bool Write(this SJWriter writer, object? value, params WriteOptions[] ws)
     {
@@ -66,7 +71,18 @@ public static class WriterTester
             writer.asciiOnly = prevAsciiOnly;
         }
     }
+    public static void WriteMustFailAfter(SJWriter writer)
+    {
+        Assert.That.IsNullOrEmpty(writer.Error, $"Writer error must be empty before checking a failing write. Error : {writer.Error}");
+        Assert.IsFalse(writer.Write("Real or fake? No no fake!"), "Writing must fail");
+    }
 
+    public static readonly OrderedDictionary writeObjects = new()
+    {
+        { "a", "b" }
+    };
+
+    // - Test
     public static bool WriteTest(SJWriter writer)
     {
         ArgumentNullException.ThrowIfNull(writer);
@@ -194,11 +210,248 @@ public static class WriterTester
 
         return success;
     }
-    public static void WriteMustFailAfter(SJWriter writer)
+    public static bool WriteTestJSC(SJWriter writer)
     {
-        Assert.That.IsNullOrEmpty(writer.Error, $"Writer error must be empty before checking a failing write. Error : {writer.Error}");
-        Assert.IsFalse(writer.Write("Real or fake? No no fake!"), "Writing must fail");
+        ArgumentNullException.ThrowIfNull(writer);
+        if (writer.depth <= 0)
+        {
+            throw new ArgumentException("Can't write test values to top level object.", nameof(writer));
+        }
+        writer.allowComments = true;
+        bool success = string.IsNullOrEmpty(writer.Error);
+
+        int startingIndex = writer.PeekState().index;
+        void CheckWriterIndex() => Assert.AreEqual(
+            ++startingIndex, writer.PeekState().index, "Expected write to increase top level element counter index"
+        );
+        int commentCount = 0;
+        void WriteCommentLine(bool expectValue = false) => success = success && writer.WriteCommentLine(
+            $"Comment {++commentCount}", hasNextValue: expectValue
+        );
+        void WriteComment(bool expectValue = false) => success = success && writer.WriteComment(
+            $"Comment {++commentCount}", hasNextValue: expectValue
+        );
+
+        // My poor Writer.. My poor writer..
+        WriteComment();
+        switch (writer.PeekState().type)
+        {
+            default:
+                throw new ArgumentException($"Unexpected top level type {writer.PeekState().type}", nameof(writer));
+
+            case SJType.Object:
+                {
+                    // There isn't any checks for duplicate keys.. Be careful!
+                    if ((writer.expect & SJWriter.Expect.Value) == SJWriter.Expect.Value)
+                    {
+                        Console.WriteLine($"The writer {writer} was expecting a value. Setting that key null.");
+                        success = success && writer.WriteNull();
+                    }
+
+                    WriteCommentLine();
+                    WriteComment();
+
+                    // "Index" count is tracked only on the top level recursive structures
+                    success = success && writer.WriteKey("yes");
+                    WriteComment();
+                    success = success && writer.Write(true);
+                    CheckWriterIndex();
+
+                    WriteComment();
+                    success = success && writer.WriteKey("no");
+                    success = success && writer.Write(false);
+                    WriteComment();
+                    CheckWriterIndex();
+
+                    WriteCommentLine();
+                    success = success && writer.WriteKey("maybe");
+                    WriteCommentLine();
+                    success = success && writer.WriteNull();
+                    WriteComment();
+                    CheckWriterIndex();
+
+                    success = success && writer.WriteKey("strings");
+                    WriteComment();
+                    WriteComment();
+                    WriteCommentLine();
+                    success = success && writer.Write("Did you know : Every minute in here 60 seconds pass. But when I'm programming every key press makes minute pass in twice the speed!");
+                    WriteCommentLine();
+                    CheckWriterIndex();
+
+                    success = success && writer.WriteKey("integer number");
+                    WriteCommentLine();
+                    WriteCommentLine();
+                    success = success && writer.Write(12345 + 67740);
+                    CheckWriterIndex();
+
+                    WriteComment();
+                    success = success && writer.WriteKey("float number");
+                    WriteCommentLine();
+                    WriteComment();
+                    success = success && writer.Write(Math.Sin(Math.PI * 0.245) * 100);
+                    WriteCommentLine();
+                    CheckWriterIndex();
+
+                    // Use WriteKV
+                    success = success && writer.WriteKV("yes 2", true);
+                    CheckWriterIndex();
+                    success = success && writer.WriteKV("no 2", false);
+                    CheckWriterIndex();
+                    success = success && writer.WriteKV("maybe 2", null);
+                    CheckWriterIndex();
+                    success = success && writer.WriteKV("strings 2", "bla bla bla");
+                    CheckWriterIndex();
+                    success = success && writer.WriteKV("calc short for calc", 50 + 3 - 7 + 12 - 5 + 24 - 12 + 53 + -12 - 40 + 1);
+                    CheckWriterIndex();
+                    success = success && writer.WriteKV("some number", Math.ScaleB(2.5, 4));
+                    CheckWriterIndex();
+
+                    success = success && writer.WriteKey("array");
+                    if (success)
+                        using (writer.Array())
+                        {
+                            for (int i = 0; i < 5; i++)
+                            {
+                                if (i % 2 == 0)
+                                {
+                                    WriteCommentLine();
+                                }
+                                else
+                                {
+                                    WriteComment();
+                                }
+
+                                success = success && writer.Write(i + 1);
+                            }
+                        }
+                    success = success && writer.WriteKey("object");
+                    if (success)
+                        using (writer.Object())
+                        {
+                            success = success && writer.WriteKey("uhhh");
+                            WriteComment();
+                            success = success && writer.Write("idk..");
+                        }
+                    break;
+                }
+            case SJType.Array:
+                {
+                    if ((writer.expect & SJWriter.Expect.Value) == SJWriter.Expect.Value)
+                    {
+                        Console.WriteLine(
+                            $"The writer {writer} was expecting a value." +
+                            $"Setting that key null. Wait a minute"
+                        );
+                        Assert.Fail("NeedValue is true while supposedly on an array.");
+                    }
+
+                    success = success && writer.Write(true);
+                    CheckWriterIndex();
+                    success = success && writer.Write(false);
+                    CheckWriterIndex();
+                    success = success && writer.WriteNull();
+                    CheckWriterIndex();
+                    success = success && writer.Write("Did you know : Every minute in here, 60 seconds pass.");
+                    CheckWriterIndex();
+                    success = success && writer.Write(12345 + 67740);
+                    CheckWriterIndex();
+                    success = success && writer.Write(Math.Sin(Math.PI * 0.245) * 100);
+                    CheckWriterIndex();
+
+                    if (success)
+                        using (writer.Array())
+                        {
+                            for (int i = 0; i < 5; i++)
+                            {
+                                success = success && writer.Write(i + 1);
+                            }
+                        }
+
+                    if (success)
+                        using (writer.Object())
+                        {
+                            success = success && writer.WriteKey("uhhh");
+                            success = success && writer.Write("idk..");
+                        }
+                    break;
+                }
+        }
+
+        return success;
     }
+    public static void WriteTestJSCMatrix(SJWriter writer, int writeCount = 3)
+    {
+        ArgumentNullException.ThrowIfNull(writer);
+
+        writer.allowComments = true;
+        writer.ThrowOnError = true;
+
+        int commentCount = 0;
+        void WriteComment(bool expectValue = false) => writer.WriteComment($"Comment {++commentCount} */ :)", hasNextValue: expectValue);
+        void WriteCommentLine(bool expectValue = false) => writer.WriteCommentLine($"Comment {++commentCount} :) //", hasNextValue: expectValue);
+
+        switch (writer.PeekState().type)
+        {
+            default:
+                throw new ArgumentException($"Unexpected top level type {writer.PeekState().type}", nameof(writer));
+
+            case SJType.Object:
+                {
+                    if (!writer.expect.HasFlag(SJWriter.Expect.Key)) writer.WriteNull();
+
+                    // Test the following pattern for Object:
+                    // [comment] [line] "key": "value"
+                    // [line] "key": [comment] "value"
+                    // [line] "key": "value" [comment] 
+                    // [comment] "key": [line] "value" 
+                    // "key": [comment] [line] "value" 
+                    // "key": [line] "value" [comment]
+                    // [comment] "key": "value" [line]
+                    // "key": [comment] "value" [line]
+                    // "key": "value" [line] [comment]
+                    for (int i = 0; i < writeCount; i++)
+                    {
+                        for (int newline = 0; newline < 3; newline++)
+                        {
+                            for (int comment = 0; comment < 3; comment++)
+                            {
+                                if (comment == 0) WriteComment(true);
+                                if (newline == 0) WriteCommentLine(true);
+
+                                writer.WriteKey($"newline {newline} + {i}");
+                                if (comment == 1) WriteComment(true);
+                                if (newline == 1) WriteCommentLine(true);
+
+                                writer.WriteString($"comment {comment} + {i}");
+                                if (comment == 2) WriteComment(i < (writeCount - 1));
+                                if (newline == 2) WriteCommentLine(i < (writeCount - 1));
+                            }
+                        }
+                    }
+                    break;
+                }
+            case SJType.Array:
+                {
+                    for (int i = 0; i < writeCount; i++)
+                    {
+                        for (int newline = 0; newline < 2; newline++)
+                        {
+                            for (int comment = 0; comment < 2; comment++)
+                            {
+                                if (comment == 0) WriteComment(true);
+                                if (newline == 0) WriteCommentLine(true);
+
+                                writer.Write($"newline + comment {newline} + {comment} + {i}");
+                                if (comment == 1) WriteComment(i < (writeCount - 1));
+                                if (newline == 1) WriteCommentLine(i < (writeCount - 1));
+                            }
+                        }
+                    }
+                    break;
+                }
+        }
+    }
+
     public static bool WriteMaxTestDepth(SJWriter writer)
     {
         writer.maxDepth = Math.Max(writer.maxDepth, 128);

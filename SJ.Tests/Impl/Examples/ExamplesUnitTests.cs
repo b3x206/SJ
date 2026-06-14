@@ -1,5 +1,4 @@
-﻿using SJ.Examples;
-using static SJ.Tests.TestData;
+﻿using static SJ.Tests.TestData;
 
 namespace SJ.Tests.Examples;
 
@@ -26,6 +25,11 @@ public sealed class ExamplesUnitTests
     public void TestBasic()
     {
         Basic.TMain([]);
+    }
+    [TestMethod]
+    public void TestBasicJSC()
+    {
+        BasicJSC.TMain([]);
     }
     [TestMethod]
     [DynamicData(nameof(TestDataProcessors))]

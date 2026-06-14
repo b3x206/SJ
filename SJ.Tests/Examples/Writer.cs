@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SJ.Examples
+namespace SJ.Tests.Examples
 {
     sealed class Writer
     {

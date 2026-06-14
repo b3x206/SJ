@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text;
 
-namespace SJ.Examples
+namespace SJ.Tests.Examples
 {
     internal sealed class Printer
     {

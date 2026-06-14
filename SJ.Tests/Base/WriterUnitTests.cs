@@ -101,7 +101,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
     }
     [TestMethod]
     [Timeout(TestTimeout.Short)]
-    public void TestResetClearsState()
+    public virtual void TestResetClearsState()
     {
         var writer = CreateWriter();
         try
@@ -259,6 +259,92 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             writer.allowComments = true;
 
             WriterTester.WriteTestRootJSC(writer);
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
+    [TestMethod]
+    [Timeout(TestTimeout.Short)]
+    [DataRow(0, DisplayName = "Indent 0 (No pretty print)")]
+    [DataRow(4, DisplayName = "Indent 4")]
+    public void TestJSCWrite(int indent)
+    {
+        var writer = CreateWriter();
+        try
+        {
+            writer.indentSize = indent;
+            writer.allowComments = true;
+            writer.ThrowOnError = true;
+
+            using (writer.Object())
+            {
+                Assert.IsTrue(WriterTester.WriteTestJSC(writer), "Writing must go without any errors");
+
+                using (writer.ArrayKV("array"))
+                {
+                    Assert.IsTrue(WriterTester.WriteTestJSC(writer), "Writing must go without any errors");
+                }
+            }
+
+            // Read resulting data
+            if (writer.CanReadData)
+            {
+                string? data = writer.ReadData();
+                // Validate
+                Assert.AreEqual(writer.count, data?.Length, $"Resulting writer counts must match. Non matching writer data: {data}");
+                ReaderTester.Read(new SJStringReader(data));
+                // And show
+                Console.WriteLine(data);
+            }
+            else
+            {
+                Assert.Inconclusive("[!] Skipping validation of write data as this writer type does not support reading data. If the test has reached here, writing ended without any errors.");
+            }
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
+    [TestMethod]
+    [Timeout(TestTimeout.Short)]
+    [DataRow(0, DisplayName = "Indent 0 (No pretty print)")]
+    [DataRow(4, DisplayName = "Indent 4")]
+    public void TestJSCMatrix(int indent)
+    {
+        var writer = CreateWriter();
+        try
+        {
+            writer.indentSize = indent;
+            writer.allowComments = true;
+            writer.ThrowOnError = true;
+
+            using (writer.Object())
+            {
+                WriterTester.WriteTestJSCMatrix(writer);
+
+                using (writer.ArrayKV("array"))
+                {
+                    WriterTester.WriteTestJSCMatrix(writer);
+                }
+            }
+
+            // Read resulting data
+            if (writer.CanReadData)
+            {
+                string? data = writer.ReadData();
+                // Validate
+                Assert.AreEqual(writer.count, data?.Length, $"Resulting writer counts must match. Non matching writer data: {data}");
+                ReaderTester.Read(new SJStringReader(data));
+                // And show
+                Console.WriteLine(data);
+            }
+            else
+            {
+                Assert.Inconclusive("[!] Skipping validation of write data as this writer type does not support reading data. If the test has reached here, writing ended without any errors.");
+            }
         }
         finally
         {

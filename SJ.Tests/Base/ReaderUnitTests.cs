@@ -103,11 +103,11 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     /// <summary>
     /// Method to use if the reader must just be read and then disposed afterwards.
     /// </summary>
-    public virtual StringBuilder ReadJSCAndDispose(TReader reader, bool ignoreComments = true)
+    public virtual StringBuilder ReadJSCAndDispose(TReader reader, bool captureComments = false)
     {
         try
         {
-            return ReaderTester.ReadJSC(reader, ignoreComments);
+            return ReaderTester.ReadJSC(reader, captureComments);
         }
         finally
         {
@@ -329,7 +329,7 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     // JSC with Capture
     [TestMethod]
     [Timeout(TestTimeout.Short)]
-    public void TestJSCWithCapture() => ReadJSCAndDispose(CreateFromString(JsonDataComment), false);
+    public void TestJSCWithCapture() => ReadJSCAndDispose(CreateFromString(JsonDataComment), true);
     [TestMethod]
     [Timeout(TestTimeout.Short)]
     [DataRow(@"{ ""key"" /* inline */ : ""value"" }")]
@@ -337,11 +337,11 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
     [DataRow(@"{ ""key"" : ""value"" /* trailing */ , ""key2"": ""value2"" }")]
     [DataRow(@"[ 1, 2, 3 /* trailing array */, 4, 5]")]
     [DataRow(@"[ 1, 2, 3 /* trailing array */]")]
-    public void TestJSCWithTrickyCapture(string data) => ReadJSCAndDispose(CreateFromString(data), false);
+    public void TestJSCWithTrickyCapture(string data) => ReadJSCAndDispose(CreateFromString(data), true);
     [TestMethod]
     [Timeout(TestTimeout.Short)]
     [ExpectedException(typeof(SJReader.ReadException))]
-    public void TestJSCInvalidWithCapture() => ReadJSCAndDispose(CreateFromString(JsonDataInvalid), false);
+    public void TestJSCInvalidWithCapture() => ReadJSCAndDispose(CreateFromString(JsonDataInvalid), true);
     // Do also read literals with no ignore JSC to test "Ended".
     [TestMethod]
     [Timeout(TestTimeout.Short)]
@@ -352,10 +352,10 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
         string CommentLeft = "// This is a comment!" + Environment.NewLine;
         string CommentRight = "// One more comment!" + Environment.NewLine + "/* Is it the end of file? */"; // All whitespace (surrounding the document) is ignored.
 
-        Assert.AreEqual(data, ReadJSCAndDispose(CreateFromString(data), false).ToString());
+        Assert.AreEqual(data, ReadJSCAndDispose(CreateFromString(data), true).ToString());
         // To spice it up, surround root data with comments on second iter.
         var data2 = $"{CommentLeft}{data}{CommentRight}";
-        Assert.AreEqual(data2, ReadJSCAndDispose(CreateFromString(data2), false).ToString());
+        Assert.AreEqual(data2, ReadJSCAndDispose(CreateFromString(data2), true).ToString());
     }
 
     // Empty root

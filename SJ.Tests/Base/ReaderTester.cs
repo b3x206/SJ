@@ -143,24 +143,24 @@ public static class ReaderTester
         return sb;
     }
 
-    public static void ReadJSC(SJReader reader, StringBuilder sb, bool ignoreComments = true, bool throwError = true)
+    public static void ReadJSC(SJReader reader, StringBuilder sb, bool captureComments = false, bool throwError = true)
     {
         ArgumentNullException.ThrowIfNull(reader);
 
         sb.Clear();
         reader.allowComments = true;
-        reader.ignoreCapturedComments = ignoreComments;
+        reader.captureComments = captureComments;
         for (var root = reader.Read(); !reader.ended; root = reader.Read())
         {
             ReadInner(sb, reader, root, throwError);
         }
     }
-    public static StringBuilder ReadJSC(SJReader reader, bool ignoreComments = true, bool throwError = true)
+    public static StringBuilder ReadJSC(SJReader reader, bool captureComments = false, bool throwError = true)
     {
         ArgumentNullException.ThrowIfNull(reader);
 
         var sb = new StringBuilder(DefaultSbCapacity);
-        ReadJSC(reader, sb, ignoreComments, throwError);
+        ReadJSC(reader, sb, captureComments, throwError);
         return sb;
     }
 }

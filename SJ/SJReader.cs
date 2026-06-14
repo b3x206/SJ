@@ -212,7 +212,7 @@ namespace SJ
         /// are done implicitly (eg: getting next value, because comments can be anywhere) depending on this value.
         /// </br>
         /// </summary>
-        public bool ignoreCapturedComments = true;
+        public bool captureComments = false;
         protected bool _ThrowOnError = false;
         /// <summary>
         /// When an erroreneous case occurs (or <see cref="Error"/> is set to anything other 
@@ -268,7 +268,7 @@ namespace SJ
         }
         /// <summary>
         /// Whether if the reader reached end. If you want to validate end of JSON document,
-        /// you should do this if <see cref="ignoreCapturedComments"/> is <see langword="false"/>:
+        /// you should do this if <see cref="captureComments"/> is <see langword="true"/>:
         /// <c>
         /// <br>for (var value = reader.Read(); !reader.Ended; value = reader.Read())</br>
         /// <br>{</br>
@@ -433,8 +433,7 @@ namespace SJ
         /// </summary>
         /// <returns>
         /// <see langword="false"/> if the ending has invalid characters. <see langword="true"/> if the document 
-        /// ending is valid. Note that for JSC without ignore comments, validating EOF is done explicitly and this method only skips whitespace.
-        /// The <see cref="Error"/> value is assigned with relevant detail.
+        /// ending is valid <b>or the code must yield, if <see cref="captureComments"/>.</b>
         /// </returns>
         protected bool UpdateEnding()
         {
@@ -450,7 +449,7 @@ namespace SJ
 
                 if (allowComments && ch == '/')
                 {
-                    if (ignoreCapturedComments)
+                    if (!captureComments)
                     {
                         if (!SkipComment())
                         {
@@ -604,7 +603,7 @@ namespace SJ
             // Validate / Parse : Comments
             else if (allowComments && ch == '/')
             {
-                if (ignoreCapturedComments)
+                if (!captureComments)
                 {
                     SkipComment();
                 }
@@ -853,7 +852,7 @@ namespace SJ
         /// </summary>
         /// <remarks>
         /// <b>This skips <see cref="SJType.Comment"/> blocks (for compatibility) regardless 
-        /// of <see cref="ignoreCapturedComments"/>' value. If you want to capture comments 
+        /// of <see cref="captureComments"/>' value. If you want to capture comments 
         /// while reading a JSON object, use lower level method of
         /// <see cref="IterateArrayEntries(Value, out EntryType, out Value)"/> instead.</b>
         /// </remarks>
@@ -907,7 +906,7 @@ namespace SJ
         /// Iterate <see cref="SJType.Object"/> typed <paramref name="object"/> value.
         /// </summary>
         /// <remarks>
-        /// <b>This skips <see cref="SJType.Comment"/> blocks regardless of <see cref="ignoreCapturedComments"/>' value.
+        /// <b>This skips <see cref="SJType.Comment"/> blocks regardless of <see cref="captureComments"/>' value.
         /// If you want to capture comments while reading a JSON object, use lower level method of
         /// <see cref="IterateObjectEntries(Value, out EntryType, out Value)"/> instead.</b>
         /// <br>Calling <see cref="IterateObject(Value, out Value, out Value)"/> with an existing key 

@@ -3,7 +3,7 @@
 
 using System.Globalization;
 
-namespace SJ.Tests
+namespace SJ.Tests.Examples
 {
     // A basic tree structure. Used for testing, but also available in the Examples
     sealed class SJTree

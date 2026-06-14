@@ -228,6 +228,123 @@ You can also use the [unit tests](./SJ.Tests) as examples too.
 * But still functional and can technically parse large valid JSON documents and JSC (Comments not captured).
 
 ### - 2.0.0
+**SJReader**
+* More explicit API (Opt-in via `SJReader.ignoreCapturedComments = false`)
 * TODO : Lots of things. Off my mind, changes are more explicit usage of API, more correctness checks (that I thought were being handled), improved unit tests, old code has to be modified (to handle new SJ cases) and comments can be now captured.
 * Do a migration guide as well. (for the 1 user of the library, which is me)
 * Rename to "BXSJ"
+
+<details>
+
+<summary> Migration from 1.x -> 2.x </summary>
+
+1. **Object keys now return an explicit value of `SJType.Key`!** <br>
+   This is easy to migrate from, if your `switch` or `if` cases check for `SJType.String` as key, it can be simply interchanged to it such as:
+```cs
+static void Process(SJReader reader, SJReader.Value v)
+{
+    switch (v.type)
+    {
+        default:
+            throw new ArgumentException($"Invalid type {v.type}", nameof(v));
+
+        // ... cases for other SJTypes available in 1.x
+        // ❌ : Will fail on an event of SJType.Key!
+        case SJType.String:
+            Console.WriteLine(new string(v.Slice()));
+            break;
+    }
+}
+
+// ...
+while (reader.IterateObject(obj, out var k, out var v))
+{
+    // ↓ Will throw! However, if you do not care about the type of the key, 
+    //   this isn't a problem as it will behave exactly like SJType.String.
+    Process(reader, k);
+    Process(reader, v);
+}
+
+// ↓ Instead do this
+static void Process(SJReader reader, SJReader.Value v)
+{
+    switch (v.type)
+    {
+        default:
+            throw new ArgumentException($"Invalid type {v.type}", nameof(v));
+
+        // ... cases for other SJTypes available in 1.x
+        // ✅ : Will not fail on an event of SJType.Key
+        case SJType.Key:
+        case SJType.String:
+            Console.WriteLine(new string(v.Slice()));
+            break;
+    }
+}
+```
+2. **Only applicable if you have used `SJReader.allowComments = true`, even with that there are cases where the old implicit behaviour is used.** <br>
+   Because any `SJReader` may have it's `ignoreCapturedComments` set as `false`, (which may require explicit calls to `Read` while `!SJReader.ended`), 
+   in a case where a "comment" is encountered on the root level, it will be not automatically skipped and will be pushed into your main reader function as a value.
+   This may cause problems in such cases like:
+```cs
+static void Process(SJReader reader, SJReader.Value v)
+{
+    switch (v.type)
+    {
+        default:
+            throw new ArgumentException($"Invalid type {v.type}", nameof(v));
+
+        // ... cases for other SJTypes available in 1.x
+        // ❌ : Will fail on a case of SJType.Comment (and Key)!
+        case SJType.Number:
+            Console.WriteLine($"Number: {new string(v.Slice())}");
+            break;
+        case SJType.Array:
+            while (reader.IterateArray(v, out var av)) 
+            {
+                Process(reader, v);
+            }
+            break;
+    }
+}
+
+const string Data = @"// I decided to allow comments for some reason
+[1.0, 2.0]
+// Oh well..
+";
+var reader = new SJStringReader(Data)
+{
+    allowComments = true,
+    captureComments = true // Not knowing we are interacting with older code
+};
+
+// And this deserialization code is not aware of "captureComments"
+// ❌ : The Read will have SJType.Comment supplied into it!
+var root = reader.Read();
+Process(reader, root);
+
+// ↓ Instead do this
+for (var root = reader.Read(); !reader.ended; root = reader.Read())
+{
+    // ✅ : Discard comments when interacting with code that disallow or not expect it
+    if (root.type == SJType.Comment) continue;
+    ReadPos(reader, root);
+}
+```
+
+3. Writing comments with `SJWriter` is easier now, you no longer need to use hacky `SJWriter.WriteLiteralValue`:
+```cs
+// 1. Enable it
+writer.allowComments = true;
+// 2. Write it (if you don't enable it before it will throw)
+writer.WriteComment("This is a comment!");
+writer.WriteCommentLine("This is a comment that starts with //!");
+
+// Note : Writer tracks whether if a comment is written (through WrittenComment). If commented json is undesired you 
+// can "false assert" that. **However it won't capture any indirect way of writing comments, so be careful!**
+```
+
+From 1.x, everything else is more or less the same, except the inner works of . <br>
+**Note:** However in the future, implicit behaviour _could be_ removed. It is recommended to use the new way of iterating objects.
+
+</details>

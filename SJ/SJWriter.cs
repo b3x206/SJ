@@ -194,6 +194,7 @@ namespace SJ
         /// </summary>
         public int count;
         public int depth;
+        public bool WrittenComment { get; protected set; }
         protected string _Error = string.Empty;
         /// <summary>
         /// The error string detailing why the writer failed.
@@ -593,8 +594,8 @@ namespace SJ
         /// (because it writes the value as is, but with the value rules and indenting).
         /// This method is not recommended for use, unless you know what you are doing.</br>
         /// <br>If on a object or array, comma is appended before the <paramref name="data"/> 
-        /// (on <see cref="PrepareValue"/>). Use <see cref="WriteComment"/>- family of methods to write comment.</br>
-        /// <br>This also can be used as a faster way to write numbers.</br>
+        /// (on <see cref="PrepareValue"/>). Use <see cref="WriteComment"/>- family of methods to write comment instead of this!.</br>
+        /// <br>This also can be used as a faster way to write numbers if you have data for that.</br>
         /// </summary>
         /// <returns>Whether if the write was successful.</returns>
         public virtual bool WriteLiteralValue(ReadOnlySpan<char> data)
@@ -661,6 +662,8 @@ namespace SJ
                 return false;
             }
 
+            // Even a mere attempt should be considered a comment write.
+            WrittenComment = true;
             PrepareCommentValue(hasNextValue);
 
             Append("/*"); count += 2;
@@ -673,6 +676,14 @@ namespace SJ
                 }
 
                 char c = data[i];
+                if (c == '*' && (i < (data.Length - 1) ? data[i + 1] : '\0') == '/')
+                {
+                    // Very fun escape action (Write as '*\/' instead of '*/' which ends comment)
+                    Append(c); count++;
+                    Append('\\'); count++;
+                    continue;
+                }
+
                 Append(c); count++;
                 if (c == '\n')
                 {
@@ -722,6 +733,7 @@ namespace SJ
                 return WriteComment(data, prefixPad, hasNextValue);
             }
 
+            WrittenComment = true;
             PrepareCommentValue(hasNextValue);
 
             Append("//"); count += 2;
@@ -1021,6 +1033,7 @@ namespace SJ
             expect = Expect.None;
             fmtExpect = FormatExpect.None;
             finish = false;
+            WrittenComment = false;
             Error = null;
         }
 
