@@ -10,7 +10,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
     /// </summary>
     public abstract TWriter CreateWriter();
     /// <summary>
-    /// Dispose <paramref name="writer"/> object. This method should throw.
+    /// Dispose <paramref name="writer"/> object. This method must not catch exceptions.
     /// </summary>
     /// <returns>Only returns whether if <paramref name="writer"/> is a valid 
     /// <see cref="IDisposable"/> and <see cref="IDisposable.Dispose"/> was called.</returns>
@@ -99,6 +99,48 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
             {
                 Assert.IsTrue(DisposeWriter(writer), "Fourth dispose must not fail, if first one is valid.");
             }
+        }
+    }
+    [TestMethod]
+    [Timeout(TestTimeout.Short)]
+    public void TestResetClearsState()
+    {
+        var writer = CreateWriter();
+        try
+        {
+            writer.ThrowOnError = false;
+            writer.WriteNumber(123);
+            writer.WriteNumber(123);
+            Assert.That.IsNotNullOrEmpty(writer.Error);
+
+            writer.Reset();
+            Assert.That.IsNullOrEmpty(writer.Error, "Error state must reset on Reset");
+            Assert.AreEqual(0, writer.count, "Writer count must be zero after reset");
+        }
+        finally
+        {
+            DisposeWriter(writer);
+        }
+    }
+    [TestMethod]
+    [Timeout(TestTimeout.Short)]
+    public void TestDefaultNoComments()
+    {
+        var writer = CreateWriter();
+        try
+        {
+            const string Message = "Error must exist on default state of writing comments with a writer";
+            writer.ThrowOnError = false;
+            writer.WriteComment("A");
+            Assert.That.IsNotNullOrEmpty(writer.Error, Message);
+
+            writer.Reset();
+            writer.WriteCommentLine("A");
+            Assert.That.IsNotNullOrEmpty(writer.Error, Message);
+        }
+        finally
+        {
+            DisposeWriter(writer);
         }
     }
 

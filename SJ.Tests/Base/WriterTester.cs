@@ -271,6 +271,9 @@ public static class WriterTester
         writer.WriteComment(C2, Pad);
         writer.WriteCommentLine(C3, Pad);
         WriterDataEquals($"//{Pad}{C1}\ntrue/*{Pad}{C2}{Pad}*/\n//{Pad}{C3}");
+        // Current fault is the fact that the comment line preparation does not newline
+        // But I also realize single line must just new line and not expect new newline to be prepared, because I'm not even tracking that state(?)
+        // Perhaps this will get redesigned again just like the Reader redesign in 2.x
         WriteMustFailAfter(writer);
         writer.Reset();
 

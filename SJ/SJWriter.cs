@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Buffers;
-using System.Xml.Linq;
+using System.Collections.Generic;
 
 namespace SJ
 {
@@ -47,7 +47,7 @@ namespace SJ
     public abstract class SJWriter
     {
         // A span based writer would be nice, but then I have to pass it
-        // into the method instead of having the span stored inside the writer.
+        // into the method always instead of having the span stored inside the writer.
         // I could create a "SJSpanWriter" that does "the same behaviour",
         // but it's repeated code. So let's be "heap only" for the time being,
         // until the library becomes more stable. Or it's "BXSave" territory (leaning towards the latter)
@@ -81,10 +81,6 @@ namespace SJ
             /// Currently stored write index (used more like a "count").
             /// </summary>
             public int index;
-            /// <summary>
-            /// Whether to skip the previous "non value" or "value" written with a newline before writing the seperator
-            /// </summary>
-            public bool skipBeforeSep;
 
             /// <summary>
             /// Whether if this entry is valid or not.
@@ -96,7 +92,6 @@ namespace SJ
             {
                 this.type = type;
                 index = 0;
-                skipBeforeSep = false;
             }
             public static implicit operator State(SJType type) => new State(type);
 
@@ -167,6 +162,11 @@ namespace SJ
         /// Whether to allow any <see cref="WriteComment"/>.
         /// </summary>
         public bool allowComments = false;
+        /// <summary>
+        /// Prefer ascii only string output. This can be used as a compatibility measure 
+        /// with older servers / systems not behaving well with non-ascii strings.
+        /// </summary>
+        public bool asciiOnly = false;
         protected bool _ThrowOnError = false;
         /// <summary>
         /// When an erroreneous case occurs (or <see cref="Error"/> is set to anything other 
@@ -230,7 +230,7 @@ namespace SJ
             _stateStack[pushIndex] = s;
             return pushIndex;
         }
-        public ref State PeekState()
+        public virtual ref State PeekState()
         {
             if (!HasState)
             {
@@ -239,7 +239,7 @@ namespace SJ
             }
             return ref _stateStack[depth - 1];
         }
-        public ref State PopState()
+        public virtual ref State PopState()
         {
             // PopState should throw as it mutates..
             if (!HasState) throw new InvalidOperationException("Cannot peek state while there is no state.");
@@ -257,6 +257,9 @@ namespace SJ
         [Flags]
         public enum Expect { None, Key = 1 << 0, Value = 1 << 1, Comma = 1 << 2 }
         public Expect expect = Expect.None;
+        [Flags]
+        public enum FormatExpect { None, Newline = 1 << 0, Indent = 1 << 1, IndentedLine = Newline | Indent }
+        public FormatExpect fmtExpect = FormatExpect.None;
 
         /// <summary>
         /// Append to the underlying StringBuilder/Stream-like object.
@@ -304,12 +307,14 @@ namespace SJ
         {
             count += SJEscape.Escape(this, selfAppend, data, asciiOnly);
         }
-        protected void PrepareIndentLine(int depth)
+        protected void PrepareFormat()
         {
-            Append('\n');
-            count++;
+            if (fmtExpect == FormatExpect.None) return;
 
-            WriteIndent(depth);
+            if ((fmtExpect & FormatExpect.Newline) == FormatExpect.Newline) { Append('\n'); count++; }
+            if ((fmtExpect & FormatExpect.Indent) == FormatExpect.Indent) { WriteIndent(depth); }
+
+            fmtExpect = FormatExpect.None;
         }
         protected void PrepareValue()
         {
@@ -322,27 +327,13 @@ namespace SJ
             ref State top = ref PeekState();
             if (top.Valid)
             {
-                if ((expect & Expect.Comma) == Expect.Comma)
+                PrepareFormat();
+
+                if (top.index > 0)
                 {
-                    if (top.skipBeforeSep && indentSize > 0)
-                    {
-                        PrepareIndentLine(depth);
-                    }
-                    if (top.index > 0)
-                    {
-                        Append(',');
-                        count++;
-                        expect &= ~Expect.Comma;
-                    }
-                    if (!top.skipBeforeSep && indentSize > 0)
-                    {
-                        PrepareIndentLine(depth);
-                    }
-                    top.skipBeforeSep = false;
-                }
-                else if (indentSize > 0)
-                {
-                    PrepareIndentLine(depth);
+                    Append(',');
+                    count++;
+                    expect &= ~Expect.Comma;
                 }
 
                 // keys shouldn't affect the write index as it's a pair
@@ -351,6 +342,10 @@ namespace SJ
                     top.index++;
                 }
             }
+        }
+        protected void PostValue()
+        {
+            // TODO : Update state depending on something..
         }
         protected void PrepareCommentValue(bool multiline, bool expectValue)
         {
@@ -366,12 +361,12 @@ namespace SJ
                         expect &= ~Expect.Comma;
                     }
 
-                    top.skipBeforeSep = false;
+                    top.newlineBeforeIndent = false;
                 }
                 else
                 {
                     // Single line comments should have next value with comma prefixed.
-                    top.skipBeforeSep = !multiline;
+                    top.newlineBeforeIndent = !multiline;
                 }
 
                 PrepareIndentLine(depth);
@@ -387,6 +382,7 @@ namespace SJ
                 WriteIndent(depth);
             }
         }
+
         public bool BeginObject()
         {
             if (finish)
@@ -411,8 +407,8 @@ namespace SJ
 
             PushState(SJType.Object);
 
-            // Wait for a key. Since starting an object, 
             expect = Expect.Key;
+            fmtExpect = FormatExpect.IndentedLine;
 
             return true;
         }
@@ -469,12 +465,13 @@ namespace SJ
             }
 
             PrepareEndValue(prevIndex);
+            fmtExpect = FormatExpect.IndentedLine;
+
             Append('}');
             count++;
 
             return true;
         }
-
         public bool BeginArray()
         {
             if (finish)
@@ -496,7 +493,9 @@ namespace SJ
             PrepareValue();
             Append('[');
             count++;
+
             expect = Expect.None;
+            fmtExpect = FormatExpect.IndentedLine;
 
             PushState(SJType.Array);
             return true;
@@ -555,22 +554,22 @@ namespace SJ
             }
 
             PrepareEndValue(prevIndex);
+            fmtExpect = FormatExpect.IndentedLine;
+
             Append(']');
             count++;
 
             return true;
         }
-
         /// <summary>
-        /// Write a key, while <see cref="NeedKey"/> is true.
-        /// <br><b>Info :</b> Base implementation does not check duplicates.</br>
+        /// Write a key, while <see cref="expect"/> has <see cref="Expect.Key"/>.
         /// </summary>
+        /// <remarks>
+        /// Base implementation <b>does not check duplicate keys for the time being within the depth..</b>
+        /// </remarks>
         /// <param name="name">Name of the key entry.</param>
-        /// <param name="options">Options for escaping the <paramref name="name"/> string.</param>
         /// <returns>Whether if the write was successful.</returns>
-        public virtual bool WriteKey(
-            ReadOnlySpan<char> name, bool asciiOnly = false
-        )
+        public virtual bool WriteKey(ReadOnlySpan<char> name)
         {
             if (finish)
             {
@@ -598,6 +597,7 @@ namespace SJ
             }
 
             expect = Expect.Value;
+            fmtExpect = FormatExpect.None;
 
             return true;
         }
@@ -607,8 +607,7 @@ namespace SJ
         /// (because it writes the value as is, but with the value rules and indenting).
         /// This method is not recommended for use, unless you know what you are doing.</br>
         /// <br>If on a object or array, comma is appended before the <paramref name="data"/> 
-        /// (on <see cref="PrepareValue"/>). Prefer <c>/* */</c> style comment 
-        /// blocks if you want to write comments.</br>
+        /// (on <see cref="PrepareValue"/>). Use <see cref="WriteComment"/>- family of methods to write comment.</br>
         /// <br>This also can be used as a faster way to write numbers.</br>
         /// </summary>
         /// <returns>Whether if the write was successful.</returns>
@@ -629,6 +628,7 @@ namespace SJ
 
             Append(data);
             count += data.Length;
+            fmtExpect = FormatExpect.IndentedLine;
 
             if (depth <= 0)
             {
@@ -658,7 +658,7 @@ namespace SJ
         /// Write a comment for JSON, starting with /* and ending with */.
         /// </summary>
         /// <param name="data">Data inside the comment to write. It is padded with spaces by default.</param>
-        /// <param name="pad">Padding left and right character to use. Pass 0 to not pad the <paramref name="data"/> with anything.</param>
+        /// <param name="pad">Padding left and right character to use. Pass 0 to not pad the <paramref name="data"/> with anything. Invalid characters (like '\n') also avoids padding.</param>
         /// <param name="hasNextValue">
         /// <br>To print "prettier", add a trailing comma or colon to the previous value. This will look nicer like</br>
         /// <c><br>"value": // ...\n</br></c>
@@ -674,13 +674,16 @@ namespace SJ
                 return false;
             }
 
-            PrepareCommentValue(true, hasNextValue);
+            PrepareCommentValue(multiline: true, hasNextValue);
 
             Append("/*"); count += 2;
             if (pad != 0) { Append(pad); count++; }
             Append(data);
             if (pad != 0) { Append(pad); count++; }
             Append("*/"); count += 2;
+
+            // Move into seperate line if possible
+            fmtExpect = FormatExpect.IndentedLine;
 
             return true;
         }
@@ -698,7 +701,7 @@ namespace SJ
         /// <br><b>Set this <see langword="true"/> with caution, as you can produce invalid Json (trailing commas) with it.</b></br>
         /// </param>
         /// <param name="data">Data inside the comment to write. It is padded with spaces by default.</param>
-        /// <param name="prefixPad">Padding prefix character to use. Pass 0 to not pad the <paramref name="data"/> with anything.</param>
+        /// <param name="prefixPad">Padding prefix character to use. Pass 0 to not pad the <paramref name="data"/> with anything. Invalid characters (like '\n') also avoids padding.</param>
         /// <returns>Whether if the write was successful.</returns>
         public virtual bool WriteCommentLine(ReadOnlySpan<char> data, char prefixPad = ' ', bool hasNextValue = false)
         {
@@ -712,7 +715,7 @@ namespace SJ
                 return WriteComment(data, prefixPad, hasNextValue);
             }
 
-            PrepareCommentValue(false, hasNextValue);
+            PrepareCommentValue(multiline: false, hasNextValue);
 
             Append("//"); count += 2;
             if (prefixPad != 0 && prefixPad != '\r' && prefixPad != '\n') { Append(prefixPad); count++; }
@@ -722,22 +725,68 @@ namespace SJ
                 char c = data[i];
                 if (c == '\n')
                 {
-                    Append(c);
-
-                    PrepareIndentLine(depth);
+                    Append(c); count++;
+                    WriteIndent(depth);
                     Append("//"); count += 2;
                     if (prefixPad != 0 && prefixPad != '\r' && prefixPad != '\n') { Append(prefixPad); count++; }
                     continue;
                 }
 
-                Append(c);
+                Append(c); count++;
             }
-            // Comment lines should be new lined
-            Append('\n');
+            // Comment lines should be new lined regardless
+            Append('\n'); count++;
+            fmtExpect = FormatExpect.Indent;
 
             return true;
         }
+        public virtual bool WriteString(ReadOnlySpan<char> value)
+        {
+            // This one does some things different enough that it can't be "WriteLiteral"
+            if (finish)
+            {
+                Error = "Attempt to write into a finished JSONWriter";
+                return false;
+            }
+            if ((expect & Expect.Key) == Expect.Key)
+            {
+                // eh sure, works, similar intent
+                return WriteKey(value);
+            }
 
+            PrepareValue();
+
+            Append('"');
+            count++;
+
+            WriteEscaped(value, asciiOnly);
+
+            Append('"');
+            count++;
+
+            if (depth <= 0)
+            {
+                finish = true;
+            }
+            else
+            {
+                var t = PeekState().type;
+                switch (t)
+                {
+                    case SJType.Object:
+                        expect = Expect.Key | Expect.Comma;
+                        break;
+                    case SJType.Array:
+                        expect = Expect.Value | Expect.Comma;
+                        break;
+                    default:
+                        Error = $"Invalid top level type {t}";
+                        return false;
+                }
+            }
+
+            return true;
+        }
         public bool WriteNumber(float number, string format = "R")
         {
             // number.ToString("G999") is totally reasonable and possible. So for floats, this is done.
@@ -818,53 +867,6 @@ namespace SJ
         }
         public bool WriteBool(bool value) => WriteLiteralValue(value ? "true" : "false");
         public bool WriteNull() => WriteLiteralValue("null");
-        public bool WriteString(ReadOnlySpan<char> value, bool asciiOnly = false)
-        {
-            // This one does some things different enough that it can't be "WriteLiteral"
-            if (finish)
-            {
-                Error = "Attempt to write into a finished JSONWriter";
-                return false;
-            }
-            if ((expect & Expect.Key) == Expect.Key)
-            {
-                // eh sure, works, similar intent
-                return WriteKey(value, asciiOnly);
-            }
-
-            PrepareValue();
-
-            Append('"');
-            count++;
-
-            WriteEscaped(value, asciiOnly);
-
-            Append('"');
-            count++;
-
-            if (depth <= 0)
-            {
-                finish = true;
-            }
-            else
-            {
-                var t = PeekState().type;
-                switch (t)
-                {
-                    case SJType.Object:
-                        expect = Expect.Key | Expect.Comma;
-                        break;
-                    case SJType.Array:
-                        expect = Expect.Value | Expect.Comma;
-                        break;
-                    default:
-                        Error = $"Invalid top level type {t}";
-                        return false;
-                }
-            }
-
-            return true;
-        }
 
         // These are like "extensions"
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -876,8 +878,8 @@ namespace SJ
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Write(ulong number, string format = "G") => WriteULong(number, format);
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Write(ReadOnlySpan<char> value, bool asciiOnly = false) => WriteString(value, asciiOnly);
-        public bool Write(string value, bool asciiOnly = false)
+        public bool Write(ReadOnlySpan<char> value) => WriteString(value);
+        public bool Write(string value)
         {
             // For the case of "Write" without any "info", the string overload is called for `null`
             // There will be an explicit check only for this. For anything else, null is treated as `default` or `string.Empty`
@@ -887,7 +889,7 @@ namespace SJ
                 return WriteNull();
             }
 
-            return WriteString(value, asciiOnly);
+            return WriteString(value);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Write(bool value) => WriteBool(value);
@@ -929,19 +931,19 @@ namespace SJ
             return WriteULong(number, format);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool WriteKV(ReadOnlySpan<char> key, ReadOnlySpan<char> value, bool asciiOnly = false)
+        public bool WriteKV(ReadOnlySpan<char> key, ReadOnlySpan<char> value)
         {
-            if (!WriteKey(key, asciiOnly))
+            if (!WriteKey(key))
             {
                 return false;
             }
 
-            return WriteString(value, asciiOnly);
+            return WriteString(value);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool WriteKV(ReadOnlySpan<char> key, string value, bool asciiOnly = false)
+        public bool WriteKV(ReadOnlySpan<char> key, string value)
         {
-            if (!WriteKey(key, asciiOnly))
+            if (!WriteKey(key))
             {
                 return false;
             }
@@ -951,7 +953,7 @@ namespace SJ
                 return WriteNull();
             }
 
-            return WriteString(value, asciiOnly);
+            return WriteString(value);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool WriteKV(ReadOnlySpan<char> key, bool value)

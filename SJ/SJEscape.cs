@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
 namespace SJ
 {
@@ -15,8 +14,8 @@ namespace SJ
         {
             None = 0,                  // No escape
             // ...                     // Anything as the target char value, within sbyte.MaxValue
-            Self = sbyte.MaxValue + 1, // Escape as \\self
-            Hex                        // Escape as \u4HEXDIG
+            Self = sbyte.MaxValue + 1, // Escape as \{self}
+            Hex                        // Escape as \u{4 Digit Codepoint}
         }
         private static readonly EscapeTableAction[] escapeTable;
         static SJEscape()
@@ -24,7 +23,7 @@ namespace SJ
             // Hex2IntTable
             const byte AsciiTableMax = sbyte.MaxValue + 1;
             hex2IntTable = new byte[AsciiTableMax];
-            Array.Fill(hex2IntTable, byte.MaxValue); // Because 0 is a valid value
+            Array.Fill(hex2IntTable, byte.MaxValue); // Because 0 is a valid value, but anything >= 16 isn't.
             for (int i = '0'; i <= '9'; i++) hex2IntTable[i] = (byte)(i - '0');
             for (int i = 'a'; i <= 'f'; i++) hex2IntTable[i] = (byte)(10 + (i - 'a'));
             for (int i = 'A'; i <= 'f'; i++) hex2IntTable[i] = (byte)(10 + (i - 'A'));
@@ -42,7 +41,7 @@ namespace SJ
             escapeTable[(byte)'\r'] = (EscapeTableAction)'r';
             escapeTable[(byte)'\t'] = (EscapeTableAction)'t';
 
-            // TODO : The other way, UnescapeTable
+            // For now, Unescape doesn't seem to need table outside of the hex2int
         }
 
         private static void To4DigitHex(char c, int index, ref Span<char> chars)
@@ -151,12 +150,13 @@ namespace SJ
         /// Unescapes <paramref name="content"/> with escapes.
         /// </summary>
         /// <remarks>
-        /// This is more permissive on what it accepts, as it will accept invalid escapes like "\\k" and unescape it like "k"
+        /// This is more permissive on what it accepts, as it will accept invalid escapes like "\\k" and unescape it like "k".
+        /// <br>If you want to reject invalid escapes, you can use <paramref name="allowInvalidEscapes"/> as false.</br>
         /// </remarks>
         /// <param name="appendAction">Action called when a character is to be appended into the arbitrary buffer.</param>
         /// <param name="content">Content to unescape.</param>
         /// <returns>Count of written characters.</returns>
-        public static int Unescape<TSelf>(TSelf self, Action<TSelf, char> appendAction, ReadOnlySpan<char> content)
+        public static int Unescape<TSelf>(TSelf self, Action<TSelf, char> appendAction, ReadOnlySpan<char> content, bool allowInvalidEscapes = true)
         {
             if (appendAction is null)
             {
@@ -226,7 +226,7 @@ namespace SJ
                                     }
                                     // whether if digit is valid
                                     int digit = hex2IntTable[cur];
-                                    if (digit == 0xFF)
+                                    if (digit > 0xF)
                                     {
                                         break;
                                     }
@@ -246,6 +246,11 @@ namespace SJ
                                 // otherwise escape \u as is
                                 else
                                 {
+                                    if (!allowInvalidEscapes)
+                                    {
+                                        throw new ArgumentException("Invalid unicode escape sequence", nameof(content));
+                                    }
+
                                     i = start;
 
                                     appendAction(self, cur);
@@ -256,6 +261,10 @@ namespace SJ
                             }
 
                         default:
+                            if (!allowInvalidEscapes)
+                            {
+                                throw new ArgumentException($"Bad control character '{cur}'", nameof(content));
+                            }
                             appendAction(self, cur);
                             count++;
                             continue;
@@ -270,15 +279,23 @@ namespace SJ
 
             return count;
         }
-        /// <inheritdoc cref="Unescape{TSelf}(TSelf, Action{TSelf, char}, ReadOnlySpan{char})"/>
-        public static string Unescape(ReadOnlySpan<char> content)
+        /// <inheritdoc cref="Unescape{TSelf}(TSelf, Action{TSelf, char}, ReadOnlySpan{char}, bool)"/>
+        public static string Unescape(ReadOnlySpan<char> content, bool allowInvalidEscapes = true)
         {
             var sb = new StringBuilder(content.Length); // Content is "longer"
-            Unescape(sb, SBAppendAction, content);
+            Unescape(sb, SBAppendAction, content, allowInvalidEscapes);
             return sb.ToString();
         }
-        /// <inheritdoc cref="Unescape{TSelf}(TSelf, Action{TSelf, char}, ReadOnlySpan{char})"/>
-        public static string Unescape(string content) =>
-            Unescape(content.AsSpan());
+        /// <inheritdoc cref="Unescape{TSelf}(TSelf, Action{TSelf, char}, ReadOnlySpan{char}, bool)"/>
+        /// <returns><see cref="string.Empty"/> if <paramref name="content"/> is null or empty, otherwise the escaped string.</returns>
+        public static string Unescape(string content, bool allowInvalidEscapes = true)
+        {
+            if (string.IsNullOrEmpty(content))
+            {
+                return string.Empty;
+            }
+
+            return Unescape(content.AsSpan(), allowInvalidEscapes);
+        }
     }
 }

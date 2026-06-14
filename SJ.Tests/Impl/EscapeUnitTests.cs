@@ -16,6 +16,10 @@ public sealed class EscapeUnitTests
 
             int escapeCount = SJEscape.Escape(sb, static (s, c) => s.Append(c), content, asciiOnly);
             Assert.AreEqual(sb.Length, escapeCount, $"Expected {sb.Length}, got {escapeCount} for:\n{sb}");
+            if (asciiOnly)
+            {
+                Assert.IsTrue(sb.ToString().All(c => c <= sbyte.MaxValue), $"All characters must be ascii on escaped string\n> '{content}'");
+            }
 
             int unescapeCount = SJEscape.Unescape(sbUnescaped, static (s, c) => s.Append(c), sb.ToString());
             Assert.AreEqual(sbUnescaped.Length, unescapeCount, $"Expected {sbUnescaped.Length}, got {unescapeCount} for :\n{sbUnescaped}");
@@ -45,8 +49,14 @@ public sealed class EscapeUnitTests
     public void TestTruncated(string data) => TestEscapeUnescape(data);
 
     [TestMethod]
+    [DataRow(EscapeInvalidUnescape)]
     [Timeout(TestTimeout.Short)]
-    public void TestBrokenUnescape()
+    [ExpectedException(typeof(ArgumentException))]
+    public void TestInvalidUnescape(string data) => SJEscape.Unescape(data, allowInvalidEscapes: false);
+
+    [TestMethod]
+    [Timeout(TestTimeout.Short)]
+    public void TestInvalidUnescape()
     {
         Assert.IsTrue(!SJEscape.Unescape(EscapeInvalidUnescape).Contains('\\'), "Behaviour : Should not contain '\\' token from invalid escapes (as it's removed and the invalid escape is written as-is)");
     }

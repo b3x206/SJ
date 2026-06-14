@@ -250,6 +250,25 @@ public abstract class ReaderUnitTests<TReader> where TReader : SJReader
             }
         }
     }
+    [TestMethod]
+    [Timeout(TestTimeout.Short)]
+    public void TestResetClearsState()
+    {
+        var reader = CreateFromString(JsonDataInvalid);
+        try
+        {
+            reader.ThrowOnError = false;
+            ReaderTester.Read(reader, throwError: false);
+
+            reader.Reset();
+            Assert.That.IsNullOrEmpty(reader.Error, "Error state must reset on Reset");
+            Assert.AreEqual(0, reader.current, "Reader position must be zero after reset");
+        }
+        finally
+        {
+            DisposeReader(reader);
+        }
+    }
 
     // Discarding
     protected static void TestDiscard(SJReader reader, string discardKey = JsonDataDiscardKey)

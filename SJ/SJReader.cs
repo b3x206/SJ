@@ -251,7 +251,7 @@ namespace SJ
             _stateStack[pushIndex] = s;
             return pushIndex;
         }
-        public ref State PeekState()
+        public virtual ref State PeekState()
         {
             if (!HasState)
             {
@@ -260,7 +260,7 @@ namespace SJ
             }
             return ref _stateStack[depth - 1];
         }
-        public ref State PopState()
+        public virtual ref State PopState()
         {
             // PopState should throw as it mutates..
             if (!HasState) throw new InvalidOperationException("Cannot peek state while there is no state.");

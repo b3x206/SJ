@@ -8,7 +8,7 @@ namespace SJ.Tests;
 public static class ReaderTester
 {
     // Top level read must be seperated into "while (!reader.Ended)" and pump SJReader.Value roots
-    public static void ReadInner(StringBuilder sb, SJReader reader, SJReader.Value root)
+    public static void ReadInner(StringBuilder sb, SJReader reader, SJReader.Value root, bool throwError = true)
     {
         switch (root.type)
         {
@@ -16,8 +16,11 @@ public static class ReaderTester
             case SJType.Error:
                 {
                     // Should be able to quit the loop. Note that Ended will also be marked on a case of error.
-                    Console.WriteLine($"Error Value: {root}, Ended:{reader.ended}, Error: '{reader.Error}'");
-                    reader.ThrowError();
+                    Console.WriteLine($"Error | Exiting {root} -- Ended:{reader.ended}, Error: '{reader.Error}'");
+                    if (throwError)
+                    {
+                        reader.ThrowError();
+                    }
                     return;
                 }
             case SJType.End:
@@ -49,7 +52,7 @@ public static class ReaderTester
                         // the "ObjectEntry type" sieve for array as well.
                         if (v.type == SJType.Comment)
                         {
-                            ReadInner(sb, reader, v);
+                            ReadInner(sb, reader, v, throwError);
                             continue;
                         }
 
@@ -57,7 +60,7 @@ public static class ReaderTester
                         if (!first)
                             sb.Append(',');
 
-                        ReadInner(sb, reader, v);
+                        ReadInner(sb, reader, v, throwError);
 
                         first = false;
                     }
@@ -79,7 +82,7 @@ public static class ReaderTester
                         switch (v.type)
                         {
                             case SJType.Comment:
-                                ReadInner(sb, reader, v);
+                                ReadInner(sb, reader, v, throwError);
                                 continue;
                             case SJType.Key:
                                 k = v;
@@ -89,9 +92,9 @@ public static class ReaderTester
                                     sb.Append(',');
 
                                 // k must be valid.
-                                ReadInner(sb, reader, k);
+                                ReadInner(sb, reader, k, throwError);
                                 sb.Append(':');
-                                ReadInner(sb, reader, v);
+                                ReadInner(sb, reader, v, throwError);
 
                                 first = false;
                                 continue;
@@ -121,26 +124,26 @@ public static class ReaderTester
     }
     public const int DefaultSbCapacity = 512;
 
-    public static void Read(SJReader reader, StringBuilder sb)
+    public static void Read(SJReader reader, StringBuilder sb, bool throwError = true)
     {
         ArgumentNullException.ThrowIfNull(reader);
 
         sb.Clear();
         for (var root = reader.Read(); !reader.ended; root = reader.Read())
         {
-            ReadInner(sb, reader, root);
+            ReadInner(sb, reader, root, throwError);
         }
     }
-    public static StringBuilder Read(SJReader reader)
+    public static StringBuilder Read(SJReader reader, bool throwError = true)
     {
         ArgumentNullException.ThrowIfNull(reader);
 
         var sb = new StringBuilder(DefaultSbCapacity);
-        Read(reader, sb);
+        Read(reader, sb, throwError);
         return sb;
     }
 
-    public static void ReadJSC(SJReader reader, StringBuilder sb, bool ignoreComments = true)
+    public static void ReadJSC(SJReader reader, StringBuilder sb, bool ignoreComments = true, bool throwError = true)
     {
         ArgumentNullException.ThrowIfNull(reader);
 
@@ -149,15 +152,15 @@ public static class ReaderTester
         reader.ignoreCapturedComments = ignoreComments;
         for (var root = reader.Read(); !reader.ended; root = reader.Read())
         {
-            ReadInner(sb, reader, root);
+            ReadInner(sb, reader, root, throwError);
         }
     }
-    public static StringBuilder ReadJSC(SJReader reader, bool ignoreComments = true)
+    public static StringBuilder ReadJSC(SJReader reader, bool ignoreComments = true, bool throwError = true)
     {
         ArgumentNullException.ThrowIfNull(reader);
 
         var sb = new StringBuilder(DefaultSbCapacity);
-        ReadJSC(reader, sb, ignoreComments);
+        ReadJSC(reader, sb, ignoreComments, throwError);
         return sb;
     }
 }
