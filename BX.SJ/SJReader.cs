@@ -387,7 +387,7 @@ namespace BX.SJ
                     }
                     else if (next == '*')
                     {
-                        while (ch != '*' && next != '/')
+                        while (!(ch == '*' && next == '/'))
                         {
                             if (end >= Length)
                             {
