@@ -1,13 +1,15 @@
-﻿# SJ .net version
+﻿# BX.SJ
 
-This is a port of https://github.com/rxi/sj.h/blob/master/sj.h with some "fixes" to improve correctness, alongside some added "epic oop inheritance design pattern" to allow reading from data implemented through by extending [`SJReader`](./SJ/SJReader.cs).
+Yet another "low level" JSON parser + writer for C#<sup>[Notes##4](#notes)</sup>.
+
+Loosely based on [sj.h](https://github.com/rxi/sj.h).
 
 This branch (`devel`) is where development is done, before getting packed into "two files". Development of the repository is done by using `git worktree` on seperate directories. This branch can have incomplete code pushed into it, so use with caution! Only the `devel` commits that I tag are "complete"<sup>[Notes##3](#notes)</sup>.
 
 ## Notes
 
 #### 1
-This is still not a **"100% correct" parser**, what it does with the data (outside of the JSON tokens) ultimately depends on what you read from the parsed chunks. It also _may fail_ on correct or _may not fail_ on wrong sequences. Use at your own risk.
+This will likely _never be_ a **"100% correct" parser**, also what it does with the data (outside of the JSON tokens) ultimately depends on what you read from the parsed chunks. It also _may fail_ on correct or _may not fail_ on wrong sequences. Use at your own risk.
 
 #### 2
 Because of
@@ -74,22 +76,32 @@ static void InspectConfigData(SJReader reader, SJReader.Value root)
 
     string entrySum = "";
     SJReader.Value key = SJReader.Value.Error();
-    while (reader.IterateObjectEntries(root, out var type, out var value))
+    while (reader.IterateObjectEntries(root, out var value))
     {
-        switch (type)
+        switch (value.type)
         {
-            case SJReader.EntryType.None:
+            case SJType.Error:
+                return;
+
+            case SJType.Comment:
                 const string SummaryTk = "@summary";
-                var comment = value.Slice(2, value.Length - 2).Trim();
+                var comment = value.Slice(2, value.Length - 2).Trim(); // Skip // or /*
                 if (comment.StartsWith(SummaryTk))
                 {
+                    // Skip */
+                    if (comment.EndsWith("*/"))
+                    {
+                        comment = comment.Slice(0, comment.Length - 2).Trim();
+                    }
+
                     entrySum = new string(comment.Slice(SummaryTk.Length).Trim());
                 }
                 continue;
-            case SJReader.EntryType.Key:
+            case SJType.Key:
                 key = value;
                 continue;
-            case SJReader.EntryType.Value:
+
+            default:
                 Console.WriteLine($"Summary: {entrySum}\n  {new string(key.Slice())} = {new string(value.Slice())}");
                 continue;
         }
@@ -101,23 +113,26 @@ const string data = @"// The problem with comments is that they can appear anywh
 {
     // Comments in JSON doesn't make much sense actually. Just use ini
     /* @summary This field is 42, and actually you can put this within the JSON, but whatever.. */
-    ""is42"": 42
+    ""is42"": 42,
+    /* @summary And this field is 67, you know why.. */
+    ""is67"": 67 // its the short form content number! 
 }
 // And to validate EOF, do this (it was implicit with the last Read()) ↓
 ";
 var reader = new SJStringReader(data)
 {
-    ignoreCapturedComments = false // opt-in to the new behaviour
+    allowComments = true,
+    captureComments = true // Opt-in to the new behaviour.
 };
 
-SJReader.Value root = reader.Read();
-do
+for (var root = reader.Read(); !reader.ended; root = reader.Read())
 {
-    if (root.type == SJType.Comment) continue; // Skip root level comments.
+    // Skip root level comments if they are irrelevant
+    if (root.type == SJType.Comment)
+        continue;
+
     InspectConfigData(reader, root);
-    root = reader.Read(); // to not get stuck in an infinite loop
 }
-while (!reader.Ended);
 ```
 
 ---
@@ -142,8 +157,6 @@ switch (SJReader.Value.type)
 This is used as the default string escape for the Writer.
 
 ### Writer
-
-Actually not success, entire code went kaput :(
 
 Use the [`SJStringWriter`](SJ/SJStringWriter.cs) class to get started.
 
@@ -176,7 +189,7 @@ var reader = new SJStringReader(data);
 position = ReadVector3(reader, reader.Read());
 
 // Use ReadData to read the resulting string.
-Console.WriteLine($"Saved Position : {data}, Read Position : {position}");
+Console.WriteLine($"Saved Position : {data.ReadData()}, Read Position : {position}");
 ```
 
 ### Benchmarks
@@ -206,11 +219,10 @@ BenchmarkDotNet v0.15.8, Linux Debian GNU/Linux 13 (trixie)
 Reader (according to ReadLarge) provides a ~464 MB/s throughput.
 Writer (according to WriteLarge) provides a ~182 MB/s throughput.
 
-The allocations are caused by creating a [`Stack<T>`](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.stack-1?view=netstandard-2.1&devlangs=csharp) when the base SJ class is initialized. <br>
-**Note:** More allocations may occur depending on the size or strings you allocate while creating an object or while writing into a resizing buffer in memory. Also the `static readonly` initializations for some lambdas within classes, but those are done only once on the program's lifetime..
+**Note:** More allocations may occur depending on the size or strings you allocate while creating an object or while writing into a resizing buffer in memory. Also the `static readonly` initializations for some lambdas within classes, but those are done only once on the program's lifetime (hence explaining some of the allocation)..
 
 Note that these are tested in the best case scenario, real life applications and usage will cause differences in speed. <br>
-_Lack of performance_ could be caused by excessive bound checking for the Reader and the source the Writer writes into..
+_The lack of performance_ could be caused by excessive bound checking + redundant state for the Reader and the Escape that Writer does..
 
 ---
 
@@ -221,22 +233,41 @@ You can also use the [unit tests](./SJ.Tests) as examples too.
 
 ---
 
+## But why?
+* Because it's for older versions of Unity, Godot and other C# runtimes without good access to System.Text.Json or other JSON libraries.
+* Newtonsoft and other behemoth JSON libraries (incl. the System.Text.Json) are not really friendly to game engine runtimes (eg. AOT, Assembly load/unload friendliness, etc.). Source generators solve this but it's generally not a simple "plug and play" solution (meaning I don't need it or it's out of scope for this repository).
+* It's meant to be simple, stable but low level meaning it can be a pinned dependency. (Large updates will always increment versions and I will try my best to make first releases not need minor updates)
+* And why is all of the state public? <br>
+  \> I like not using reflection to access object's properties. Of course, it is "more dangerous" and prone to misuse, but it allows better extensions.
+
 ## Changelog
 ### - 1.0.0
 * Initial release as "SJ".
-* Somewhat janky unit tests, implicit/automated validation of files that were partially broken (is too permissive).
+* Somewhat janky unit tests, implicit/automated validation of files that could be partially broken (is too permissive).
 * But still functional and can technically parse large valid JSON documents and JSC (Comments not captured).
+* Released with the same Reader and Writer.
 
 ### - 2.0.0
-**SJReader**
-* More explicit API (Opt-in via `SJReader.ignoreCapturedComments = false`)
-* TODO : Lots of things. Off my mind, changes are more explicit usage of API, more correctness checks (that I thought were being handled), improved unit tests, old code has to be modified (to handle new SJ cases) and comments can be now captured.
-* Do a migration guide as well. (for the 1 user of the library, which is me)
 * Rename to "BXSJ"
+
+**▶ SJReader**
+* More explicit API (but migrating to explicitness will likely not break older code, except for the new Key type)
+* Reader now asserts correctness better
+* Stack management is explicit
+* Can capture `SJType.Comment` blocks if comments are allowed (opt-in via `SJReader.captureComments = true`)
+
+**▶ SJWriter**
+* Writer now asserts correctness better
+* Can write comments (opt-in via `SJWriter.allowComments = true`)
+
+**▶ SJEscape**
+* String escaping is now faster
+
+The inner workings have been reworked partially..
 
 <details>
 
-<summary> Migration from 1.x -> 2.x </summary>
+<summary>• Migration from 1.x -> 2.x </summary>
 
 1. **Object keys now return an explicit value of `SJType.Key`!** <br>
    This is easy to migrate from, if your `switch` or `if` cases check for `SJType.String` as key, it can be simply interchanged to it such as:
@@ -283,7 +314,7 @@ static void Process(SJReader reader, SJReader.Value v)
 }
 ```
 2. **Only applicable if you have used `SJReader.allowComments = true`, even with that there are cases where the old implicit behaviour is used.** <br>
-   Because any `SJReader` may have it's `ignoreCapturedComments` set as `false`, (which may require explicit calls to `Read` while `!SJReader.ended`), 
+   Because any `SJReader` may have it's `captureComments` set as `true`, (which may require explicit calls to `Read` while `!SJReader.ended`), 
    in a case where a "comment" is encountered on the root level, it will be not automatically skipped and will be pushed into your main reader function as a value.
    This may cause problems in such cases like:
 ```cs
@@ -332,7 +363,30 @@ for (var root = reader.Read(); !reader.ended; root = reader.Read())
 }
 ```
 
-3. Writing comments with `SJWriter` is easier now, you no longer need to use hacky `SJWriter.WriteLiteralValue`:
+3. The inner workings of custom `SJReader` and `SJWriter` has changed (generally the access modifiers):
+```cs
+// For SJReader:
+// (the behaviour isn't changed, only the access modifiers)
+protected override char At(int i); /* → */ public override char At(int i);
+protected override ReadOnlySpan<char> Slice(int start, int length); /* → */ public override ReadOnlySpan<char> Slice(int start, int length);
+
+// For SJWriter:
+// Add these two, change accordingly to your data source:
+public override bool CanReadData => true;
+public override string ReadData() => sb.ToString();
+
+// Can clear data on Reset()
+public override void Reset()
+{
+    base.Reset();
+    sb.Clear();
+}
+
+// ⚠️ : ToString() should no longer return the data written by the SJWriter, instead it should state if relevant.
+// ❌ : public override string ToString() { return ReadData(); }
+```
+
+4. Writing comments with `SJWriter` is easier now, you no longer need to use hacky `SJWriter.WriteLiteralValue`:
 ```cs
 // 1. Enable it
 writer.allowComments = true;
@@ -344,7 +398,38 @@ writer.WriteCommentLine("This is a comment that starts with //!");
 // can "false assert" that. **However it won't capture any indirect way of writing comments, so be careful!**
 ```
 
-From 1.x, everything else is more or less the same, except the inner works of . <br>
-**Note:** However in the future, implicit behaviour _could be_ removed. It is recommended to use the new way of iterating objects.
+5. Unit tests have been changed to support custom `SJReader` and `SJWriter` classes (for extensions maybe), with more coverage and cases to test.
+```cs
+namespace MySJEx.Tests;
+
+// Reader
+[TestClass]
+public sealed class CustomReaderTests : ReaderUnitTests<SJCustomReader>
+{
+    public override SJCustomReader CreateFromString(string data) => new(new MemoryStream(Encoding.UTF8.GetBytes(data)), Encoding.UTF8);
+    public override SJCustomReader CreateFromStream(Stream data, Encoding? enc) => new(data, enc);
+    // Some other bootstrap functions can be changed via overriding
+
+    // Some optional tests are declared "virtual" so that you can apply [TestMethod]
+    [TestMethod]
+    public override void TestDisposeTwice()
+    {
+        base.TestDisposeTwice();
+    }
+}
+
+// Writer
+[TestClass]
+public sealed class CustomWriterTests : WriterUnitTests<SJCustomWriter>
+{
+    public override SJCustomWriter CreateWriter() => new();
+    // Some other bootstrap functions can be changed via overriding
+
+    // (similar optional tests exist on Writer)
+}
+```
+
+From 1.x, everything else is more or less the same, except the inner workings of the reader and writer. <br>
+**Note:** However in the future releases, implicit behaviour _could be_ removed. It is recommended to use the new way of iterating objects and arrays.
 
 </details>
