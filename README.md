@@ -1,6 +1,6 @@
 ﻿# BX.SJ
 
-Yet another "low level" JSON parser + writer for C#<sup>[Notes##4](#notes)</sup>.
+Yet another "low level" JSON parser + writer for C#.
 
 Loosely based on [sj.h](https://github.com/rxi/sj.h).
 
@@ -193,36 +193,38 @@ Console.WriteLine($"Saved Position : {data.ReadData()}, Read Position : {positio
 ```
 
 ### Benchmarks
-**TODO : Outdated**
 
 * Read = Read a [small file (valid.json)](TestFiles/valid.json) 256 times
-* ReadLarge = Read a [large file (5mb.json)](TestFiles/5mb.json) 16 times
+* ReadLarge = Read a [large file (5mb.json)](TestFiles/5mb.json) 32 times
 * Write = Write few kb of JSON (`{ "random_key": "random_value", ... 512 entries }`) 256 times
-* WriteLarge = Write ~500kb JSON (`{ "random_key": "random_value", ... 16384 entries }`) 16 times
+* WriteLarge = Write ~500kb JSON (`{ "random_key": "random_value", ... 16384 entries }`) 32 times
 
 Classes used are [`SJStringReader`](./SJ/SJStringReader.cs) and [`SJStringWriter`](SJ/SJStringWriter.cs)
 
-```
-BenchmarkDotNet v0.15.8, Linux Debian GNU/Linux 13 (trixie)
-13th Gen Intel Core i7-13620H 2.92GHz, 1 CPU, 16 logical and 8 physical cores
-.NET SDK 8.0.421
-  [Host]     : .NET 8.0.27 (8.0.27, 8.0.2726.22922), X64 RyuJIT x86-64-v3
-  DefaultJob : .NET 8.0.27 (8.0.27, 8.0.2726.22922), X64 RyuJIT x86-64-v3
-```
-| Method     | Mean         | Error      | StdDev     | Allocated |
-|----------- |-------------:|-----------:|-----------:|----------:|
-| Read       |  29841.4 μs |   475.8 μs |   445.0 μs |     136 B |
-| ReadLarge  | 181649.1 μs |  3476.7 μs |  4641.4 μs |     136 B |
-| Write      |  18381.9 μs |   115.7 μs |   102.5 μs |     152 B |
-| WriteLarge |  32507.3 μs |   245.2 μs |   217.4 μs |     152 B |
+`ReaderBenchmarks`
 
-Reader (according to ReadLarge) provides a ~464 MB/s throughput.
-Writer (according to WriteLarge) provides a ~182 MB/s throughput.
+| Method             | Mean        | Error     | StdDev    | Ratio      | RatioSD  | Allocated | Alloc Ratio |
+|--------------------|------------:|----------:|----------:|-----------:|---------:|----------:|------------:|
+| ReadLargeBaseline  |   3.5105 ms | 0.0200 ms | 0.0177 ms |       1.00 |     0.01 |         - |          NA |
+| ReadLarge          | 408.2533 ms | 1.4103 ms | 1.3192 ms |     116.30 |     0.67 |         - |          NA |
+|                    |             |           |           |            |          |           |             |
+| ReadBaseline       |   0.0392 ms | 0.0001 ms | 0.0001 ms |       1.00 |     0.00 |         - |          NA |
+| Read               |  36.6612 ms | 0.2419 ms | 0.2263 ms |     935.90 |     6.17 |         - |          NA |
 
-**Note:** More allocations may occur depending on the size or strings you allocate while creating an object or while writing into a resizing buffer in memory. Also the `static readonly` initializations for some lambdas within classes, but those are done only once on the program's lifetime (hence explaining some of the allocation)..
+`WriterBenchmarks`
 
-Note that these are tested in the best case scenario, real life applications and usage will cause differences in speed. <br>
-_The lack of performance_ could be caused by excessive bound checking + redundant state for the Reader and the Escape that Writer does..
+| Method             | Mean        | Error     | StdDev    | Ratio      | RatioSD  | Gen0   | Allocated | Alloc Ratio |
+|------------------- |------------:|----------:|----------:|-----------:|---------:|-------:|----------:|------------:|
+| WriteBaseline      |   0.0005 ms | 0.0000 ms | 0.0000 ms |       1.00 |     0.01 | 0.0134 |     168 B |        1.00 |
+| Write              |  11.0221 ms | 0.1107 ms | 0.1036 ms |  23,509.18 |   252.60 |      - |     168 B |        1.00 |
+|                    |             |           |           |            |          |        |           |             |
+| WriteLargeBaseline |   0.0001 ms | 0.0000 ms | 0.0000 ms |       1.00 |     0.00 | 0.0134 |     168 B |        1.00 |
+| WriteLarge         |  45.7750 ms | 0.1747 ms | 0.1548 ms | 575,208.09 | 2,453.84 |      - |     168 B |        1.00 |
+
+
+**Note:** I'm not good at writing benchmarks and these were not tested in 100% optimal situation (hence the baseline being too large on some "benches"). Also, the speed could be worse than this as other code will run alongside it.
+
+_I speculate that_ the lack of performance could be caused by excessive bound checking + redundant state for the Reader, the Escape that Writer does and other many factors (using netstandard build too maybe)..
 
 ---
 
@@ -236,9 +238,9 @@ You can also use the [unit tests](./SJ.Tests) as examples too.
 ## But why?
 * Because it's for older versions of Unity, Godot and other C# runtimes without good access to System.Text.Json or other JSON libraries.
 * Newtonsoft and other behemoth JSON libraries (incl. the System.Text.Json) are not really friendly to game engine runtimes (eg. AOT, Assembly load/unload friendliness, etc.). Source generators solve this but it's generally not a simple "plug and play" solution (meaning I don't need it or it's out of scope for this repository).
-* It's meant to be simple, stable but low level meaning it can be a pinned dependency. (Large updates will always increment versions and I will try my best to make first releases not need minor updates)
+* It's meant to be simple and stable but low level meaning it can be a pinned dependency. (Large updates will always increment versions and I will try my best to make first releases not need minor updates)
 * And why is all of the state public? <br>
-  \> I like not using reflection to access object's properties. Of course, it is "more dangerous" and prone to misuse, but it allows better extensions.
+  \> I like not using reflection to access object's properties. Of course, it is "more dangerous" and prone to misuse, but it allows for better extensions and analysis (especially if you distribute it in a way hard to change the library like "dll" or "upm package").
 
 ## Changelog
 ### - 1.0.0
@@ -262,6 +264,8 @@ You can also use the [unit tests](./SJ.Tests) as examples too.
 
 **▶ SJEscape**
 * String escaping is now faster
+* Removed UCS-2 style escaping surrogate pairs (for speed reasons)
+* Tested _slightly better_
 
 The inner workings have been reworked partially..
 
@@ -269,7 +273,13 @@ The inner workings have been reworked partially..
 
 <summary>• Migration from 1.x -> 2.x </summary>
 
-1. **Object keys now return an explicit value of `SJType.Key`!** <br>
+1. **Everything has been moved from `SJ` to `BX.SJ` namespace**
+```cs
+using SJ;    // ❌
+using BX.SJ; // ✅
+```
+
+2. **Object keys now return an explicit value of `SJType.Key`!** <br>
    This is easy to migrate from, if your `switch` or `if` cases check for `SJType.String` as key, it can be simply interchanged to it such as:
 ```cs
 static void Process(SJReader reader, SJReader.Value v)
@@ -313,7 +323,7 @@ static void Process(SJReader reader, SJReader.Value v)
     }
 }
 ```
-2. **Only applicable if you have used `SJReader.allowComments = true`, even with that there are cases where the old implicit behaviour is used.** <br>
+3. **Only applicable if you have used `SJReader.allowComments = true`, even with that there are cases where the old implicit behaviour is used.** <br>
    Because any `SJReader` may have it's `captureComments` set as `true`, (which may require explicit calls to `Read` while `!SJReader.ended`), 
    in a case where a "comment" is encountered on the root level, it will be not automatically skipped and will be pushed into your main reader function as a value.
    This may cause problems in such cases like:
@@ -363,7 +373,7 @@ for (var root = reader.Read(); !reader.ended; root = reader.Read())
 }
 ```
 
-3. The inner workings of custom `SJReader` and `SJWriter` has changed (generally the access modifiers):
+4. The inner workings of custom `SJReader` and `SJWriter` has changed (generally the access modifiers):
 ```cs
 // For SJReader:
 // (the behaviour isn't changed, only the access modifiers)
@@ -386,7 +396,7 @@ public override void Reset()
 // ❌ : public override string ToString() { return ReadData(); }
 ```
 
-4. Writing comments with `SJWriter` is easier now, you no longer need to use hacky `SJWriter.WriteLiteralValue`:
+5. Writing comments with `SJWriter` is easier now, you no longer need to use hacky `SJWriter.WriteLiteralValue`:
 ```cs
 // 1. Enable it
 writer.allowComments = true;
@@ -398,7 +408,7 @@ writer.WriteCommentLine("This is a comment that starts with //!");
 // can "false assert" that. **However it won't capture any indirect way of writing comments, so be careful!**
 ```
 
-5. Unit tests have been changed to support custom `SJReader` and `SJWriter` classes (for extensions maybe), with more coverage and cases to test.
+6. Unit tests have been changed to support custom `SJReader` and `SJWriter` classes (for extensions maybe), with more coverage and cases to test.
 ```cs
 namespace MySJEx.Tests;
 
@@ -430,6 +440,6 @@ public sealed class CustomWriterTests : WriterUnitTests<SJCustomWriter>
 ```
 
 From 1.x, everything else is more or less the same, except the inner workings of the reader and writer. <br>
-**Note:** However in the future releases, implicit behaviour _could be_ removed. It is recommended to use the new way of iterating objects and arrays.
+**Note:** However in the future releases, implicit behaviour _could be_ removed. It is recommended to use the new way (with `for`) of iterating objects and arrays.
 
 </details>

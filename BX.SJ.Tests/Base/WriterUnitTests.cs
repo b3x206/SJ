@@ -294,7 +294,7 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
                 string? data = writer.ReadData();
                 // Validate
                 Assert.AreEqual(writer.count, data?.Length, $"Resulting writer counts must match. Non matching writer data: {data}");
-                ReaderTester.Read(new SJStringReader(data));
+                ReaderTester.ReadJSC(new SJStringReader(data));
                 // And show
                 Console.WriteLine(data);
             }

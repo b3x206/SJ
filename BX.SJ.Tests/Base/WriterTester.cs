@@ -77,11 +77,6 @@ public static class WriterTester
         Assert.IsFalse(writer.Write("Real or fake? No no fake!"), "Writing must fail");
     }
 
-    public static readonly OrderedDictionary writeObjects = new()
-    {
-        { "a", "b" }
-    };
-
     // - Test
     public static bool WriteTest(SJWriter writer)
     {
@@ -346,16 +341,29 @@ public static class WriterTester
                     }
 
                     success = success && writer.Write(true);
+                    WriteComment();
+                    WriteCommentLine();
                     CheckWriterIndex();
+                    WriteComment();
                     success = success && writer.Write(false);
+                    WriteCommentLine();
                     CheckWriterIndex();
+                    WriteCommentLine();
                     success = success && writer.WriteNull();
+                    WriteCommentLine();
                     CheckWriterIndex();
+                    WriteCommentLine();
                     success = success && writer.Write("Did you know : Every minute in here, 60 seconds pass.");
+                    WriteComment();
                     CheckWriterIndex();
+                    WriteComment();
                     success = success && writer.Write(12345 + 67740);
+                    WriteComment();
                     CheckWriterIndex();
+                    WriteComment();
+                    WriteComment();
                     success = success && writer.Write(Math.Sin(Math.PI * 0.245) * 100);
+                    WriteComment();
                     CheckWriterIndex();
 
                     if (success)

@@ -128,6 +128,7 @@ public static class ReaderTester
     {
         ArgumentNullException.ThrowIfNull(reader);
 
+        reader.ThrowOnError = throwError;
         sb.Clear();
         for (var root = reader.Read(); !reader.ended; root = reader.Read())
         {
@@ -150,6 +151,7 @@ public static class ReaderTester
         sb.Clear();
         reader.allowComments = true;
         reader.captureComments = captureComments;
+        reader.ThrowOnError = throwError;
         for (var root = reader.Read(); !reader.ended; root = reader.Read())
         {
             ReadInner(sb, reader, root, throwError);

@@ -753,7 +753,14 @@ namespace BX.SJ
                     if (prefixPad != 0 && prefixPad != '\r' && prefixPad != '\n') { Append(prefixPad); count++; }
                 }
             }
+
             fmtExpect = FormatExpect.NewlineIndent;
+            // something something FormatExpect is done after Expect tokens and this is whitespace sensitive
+            if (depth > 0 && (expect & Expect.Comma) == Expect.Comma)
+            {
+                Append('\n'); count++;
+                fmtExpect &= ~FormatExpect.Newline;
+            }
 
             return true;
         }

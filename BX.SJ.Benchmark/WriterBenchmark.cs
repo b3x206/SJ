@@ -4,7 +4,7 @@ using BenchmarkDotNet.Configs;
 namespace BX.SJ.Benchmark;
 
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
-public abstract class SJWriterBenchmark<TWriter> where TWriter : SJWriter
+public abstract class WriterBenchmark<TWriter> where TWriter : SJWriter
 {
     public const int NWriteIters = 256;
     public const int NWriteLargeIters = 32;

@@ -9,7 +9,7 @@ using System.Text;
 namespace BX.SJ.Benchmark
 {
     [MemoryDiagnoser]
-    public class SJStringReaderBenchmark : SJReaderBenchmark<SJStringReader>
+    public class SJStringReaderBenchmark : ReaderBenchmark<SJStringReader>
     {
         public string smallText = string.Empty;
         public string largeText = string.Empty;
@@ -42,7 +42,7 @@ namespace BX.SJ.Benchmark
     }
 
     [MemoryDiagnoser]
-    public class SJStringWriterBenchmark : SJWriterBenchmark<SJStringWriter>
+    public class SJStringWriterBenchmark : WriterBenchmark<SJStringWriter>
     {
         public static readonly StringBuilder sharedBuilder = new(524288);
 

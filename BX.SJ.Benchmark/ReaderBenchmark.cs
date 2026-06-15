@@ -5,7 +5,7 @@ using System.Diagnostics;
 namespace BX.SJ.Benchmark;
 
 [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
-public abstract class SJReaderBenchmark<TReader> where TReader : SJReader
+public abstract class ReaderBenchmark<TReader> where TReader : SJReader
 {
     public const int NReadIters = 256;
     public const int NReadLargeIters = 32;
