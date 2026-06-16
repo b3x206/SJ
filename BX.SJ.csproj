@@ -12,4 +12,8 @@
     <Description>Simple library to facilitate parsing/writing JSON documents.</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="Examples/**" />
+  </ItemGroup>
+
 </Project>

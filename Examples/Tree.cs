@@ -1,9 +1,10 @@
 ﻿#pragma warning disable CA1510 // Use ArgumentNullException throw helper
 #nullable disable
-
+using System;
 using System.Globalization;
+using System.Collections.Generic;
 
-namespace BX.SJ.Tests.Examples
+namespace BX.SJ.Examples
 {
     // A basic tree structure. Used for testing, but also available in the Examples
     internal sealed class SJTree

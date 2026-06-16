@@ -1,4 +1,6 @@
-﻿namespace BX.SJ.Tests.Examples
+﻿using System;
+
+namespace BX.SJ.Examples
 {
     internal sealed class Basic
     {
