@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace SJ
+namespace BX.SJ
 {
     /// <summary>
     /// Uses <see cref="string"/> as JSON read resource.
@@ -9,7 +9,7 @@ namespace SJ
     /// <example>
     /// <![CDATA[
     /// // This example shows how you can recursively read from a SJReader
-    /// using SJ;
+    /// using BX.SJ;
     /// using System.Text;
     /// 
     /// var data = "{ \"foo\": [\"bar\", \"baz\"], \"idk\": 42, \"mango\": { \"6\": 7 } }";
@@ -121,10 +121,10 @@ namespace SJ
         public override int Length => _Data?.Length ?? 0;
         // Because I ported the pointer stuff as-is, some parts of the parser may read off by one.
         // It is recommended to do an bound check and return EOF of your choice
-        protected override char At(int i) => i >= 0 && i < Length ? _Data[i] : '\0';
+        public override char At(int i) => i >= 0 && i < Length ? _Data[i] : '\0';
         // Because each value slice is evaluated lazily, the data ranges must persist and should be representable easily as a range (making arbitrary Streams much harder)
         // Note that there isn't much of a reason to do this, if you read the data as soon as it's received from the SJReader.
-        protected override ReadOnlySpan<char> Slice(int start, int length) =>
+        public override ReadOnlySpan<char> Slice(int start, int length) =>
             string.IsNullOrEmpty(_Data) ? ReadOnlySpan<char>.Empty : _Data.AsSpan(start, length);
     }
 }

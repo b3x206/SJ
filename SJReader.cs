@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace SJ
+namespace BX.SJ
 {
     /// <summary>
     /// Inferred type of the read JSON.
@@ -13,6 +12,7 @@ namespace SJ
         Error,
 
         Number,
+        Key,
         String,
         Bool,
         Null,
@@ -20,6 +20,8 @@ namespace SJ
         Object,
         Array,
         End,
+
+        Comment,
     }
 
     /// <summary>
@@ -27,7 +29,7 @@ namespace SJ
     /// </summary>
     /// <example>
     /// <![CDATA[
-    /// using SJ;
+    /// using BX.SJ;
     /// using System;
     /// 
     /// // An example class would look like this:
@@ -61,16 +63,20 @@ namespace SJ
     ///     // This is used as a limiter.
     ///     public override int Length => _Data?.Length ?? 0;
     ///     // Because I ported the pointer stuff as-is, some parts of the parser may read off by one.
-    ///     // It is recommended to do an bound check and return EOF of your choice
-    ///     protected override char At(int i) => i >= 0 && i < Length ? _Data[i] : '\0';
+    ///     // It is recommended to do a bound check and return EOF of your choice
+    ///     public override char At(int i) => i >= 0 && i < Length ? _Data[i] : '\0';
     ///     // Because each value slice is evaluated lazily, the data ranges must persist and should be representable easily as a range (making arbitrary Streams much harder)
     ///     // Note that there isn't much of a reason to do this, if you read the data as soon as it's received from the SJReader.
-    ///     protected override ReadOnlySpan<char> Slice(int start, int length) => string.IsNullOrEmpty(_Data) ? ReadOnlySpan<char>.Empty : _Data.AsSpan(start, length);
+    ///     public override ReadOnlySpan<char> Slice(int start, int length) => string.IsNullOrEmpty(_Data) ? ReadOnlySpan<char>.Empty : _Data.AsSpan(start, length);
     /// }
     /// ]]>
     /// </example>
     public abstract class SJReader
     {
+        // TODO:
+        // * Generic class (with the character unit type), or to avoid boxing,
+        //   byte version that does ASCII (ignores UTF-8, but should work as all JSON tokens are within ascii)
+
         /// <summary>
         /// Exception thrown on an error case while reading JSON.
         /// </summary>
@@ -83,7 +89,6 @@ namespace SJ
             public ReadException(string message) : base(message)
             { }
         }
-
         /// <summary>
         /// Value result from <see cref="Read"/>.
         /// </summary>
@@ -92,28 +97,39 @@ namespace SJ
             public readonly SJReader reader;
             public SJType type;
             public int start, end;
-            public int depth;
+            /// <summary>
+            /// Object typed value depth of this value. This is used for <see cref="DiscardUntil(int)"/>.
+            /// <br><b>Only applicable when type is <see cref="SJType.Object"/>, 
+            /// <see cref="SJType.Array"/> or <see cref="SJType.End"/>!</b></br>
+            /// </summary>
+            public int objectDepth;
+            /// <summary>
+            /// <see cref="SJReader.depth"/> of the <see cref="reader"/> while this Value was being created.
+            /// </summary>
+            public readonly int depth;
 
             public Value(SJReader reader)
             {
                 this.reader = reader;
                 type = SJType.Error;
                 start = end = 0;
-                depth = 0;
+                objectDepth = 0;
+                depth = reader?.depth ?? 0;
             }
-            public Value(SJReader reader, SJType type, int start, int end, int depth)
+            public Value(SJReader reader, SJType type, int start, int end, int objectDepth, int depth)
             {
                 this.reader = reader;
                 this.type = type;
                 this.start = start;
                 this.end = end;
+                this.objectDepth = objectDepth;
                 this.depth = depth;
             }
 
-            public static Value Error() => new Value(null, SJType.Error, -1, -1, -1);
-            public static Value Error(SJReader reader) => new Value(reader, SJType.Error, -1, -1, -1);
-            public static Value Null() => new Value(null, SJType.Null, -1, -1, -1);
-            public static Value Null(SJReader reader) => new Value(reader, SJType.Null, -1, -1, -1);
+            public static Value Error() => new Value(null, SJType.Error, -1, -1, -1, -1);
+            public static Value Error(SJReader reader) => new Value(reader, SJType.Error, -1, -1, -1, reader?.depth ?? -1);
+            public static Value Null() => new Value(null, SJType.Null, -1, -1, -1, -1);
+            public static Value Null(SJReader reader) => new Value(reader, SJType.Null, -1, -1, -1, reader?.depth ?? -1);
 
             public readonly int Length
             {
@@ -128,19 +144,50 @@ namespace SJ
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public readonly ReadOnlySpan<char> Slice(int start)
             {
-                Debug.Assert(start < Length);
+                Debug.Assert(start <= Length);
                 return reader.Slice(this.start + start, Length - start);
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public readonly ReadOnlySpan<char> Slice(int start, int length)
             {
-                Debug.Assert((start + length) < Length);
+                Debug.Assert((start + length) <= Length);
                 return reader.Slice(this.start + start, length);
             }
 
             public override readonly string ToString()
             {
-                return $"[SJReader.Value] type:{type}, start:{start}, end:{end}, depth:{depth}";
+                return $"[SJReader.Value] type:{type}, start:{start}, end:{end}, depth:{objectDepth}";
+            }
+        }
+
+        [Flags]
+        public enum Expect { None = 0, Comma = 1 << 0, Key = 1 << 1, Colon = 1 << 2 }
+        public struct State
+        {
+            public SJType type;
+            public int valueCount;
+            public Expect expect;
+            public readonly bool invalid;
+            public static State Invalid => new State(true);
+
+            private State(bool invalid)
+            {
+                type = SJType.Error;
+                valueCount = 0;
+                expect = Expect.None;
+                this.invalid = invalid;
+            }
+            public State(SJType type, Expect expect)
+            {
+                this.type = type switch
+                {
+                    SJType.Object => type,
+                    SJType.Array => type,
+                    _ => throw new ArgumentException("Supplied stateful type must be Object or Array only", nameof(type))
+                };
+                this.expect = expect;
+                valueCount = 0;
+                invalid = false;
             }
         }
 
@@ -155,6 +202,15 @@ namespace SJ
         /// <br>/* &lt;-- until end token --&gt; */</br>
         /// </summary>
         public bool allowComments = false;
+        /// <summary>
+        /// Captured JSON comments are skipped
+        /// <br>(they are not pushed as JSON values from <see cref="Read"/> method)</br>
+        /// <br><b>Caution:</b> If you set this <see langword="false"/>, the document must be 
+        /// read differently compared to the basic method, as EOF validation and other things 
+        /// are done implicitly (eg: getting next value, because comments can be anywhere) depending on this value.
+        /// </br>
+        /// </summary>
+        public bool captureComments = false;
         protected bool _ThrowOnError = false;
         /// <summary>
         /// When an erroreneous case occurs (or <see cref="Error"/> is set to anything other 
@@ -177,8 +233,55 @@ namespace SJ
         }
 
         // state
-        public int current = 0;
-        public int depth = 0;
+        public int depth = 0;   // "Current depth" tracker. Used with the so called "stack"
+        public int current = 0; // "Current index" tracker
+        protected const int DefaultStackSize = 8;
+        protected State[] _stateStack = new State[DefaultStackSize];
+        private State _stubState = State.Invalid;
+        public bool HasState => depth > 0;
+        public virtual int PushState(State s)
+        {
+            if ((_stateStack?.Length - 1) < depth)
+            {
+                Array.Resize(ref _stateStack, _stateStack.Length <= 0 ? DefaultStackSize : _stateStack.Length * 2);
+            }
+            int pushIndex = depth++;
+            _stateStack[pushIndex] = s;
+            return pushIndex;
+        }
+        public virtual ref State PeekState()
+        {
+            if (!HasState)
+            {
+                _stubState = State.Invalid;
+                return ref _stubState;
+            }
+            return ref _stateStack[depth - 1];
+        }
+        public virtual ref State PopState()
+        {
+            // PopState should throw as it mutates..
+            if (!HasState) throw new InvalidOperationException("Cannot peek state while there is no state.");
+            return ref _stateStack[--depth];
+        }
+        /// <summary>
+        /// Whether if the reader reached end. If you want to validate end of JSON document,
+        /// you should do this if <see cref="captureComments"/> is <see langword="true"/>:
+        /// <c>
+        /// <br>for (var value = reader.Read(); !reader.Ended; value = reader.Read())</br>
+        /// <br>{</br>
+        /// <br>switch (value.type) // ... processing code, if type is comment next "Read" must be called again to proceed ... </br>
+        /// <br>// Also, errors must be handled correctly. If <see cref="Read"/> is called while in error state, this field won't be touched.</br>
+        /// <br>}</br>
+        /// </c>
+        /// </summary>
+        public bool ended;
+
+        /// <summary>
+        /// Last key read on a object key/value pair. If an <see cref="EntryType.Value"/> 
+        /// <see cref="Value"/> is returned while this is set, this value is the key that is for it.
+        /// </summary>
+        public Value LastEntryKey { get; protected set; }
         protected string _Error = string.Empty;
         /// <summary>
         /// The error string detailing why the reader failed.
@@ -201,11 +304,6 @@ namespace SJ
                 }
             }
         }
-        public Stack<SJType> lastRecursableTypes;
-        /// <summary>
-        /// State for checking colons in <see cref=""/>
-        /// </summary>
-        protected int _ColonsRequired = -1;
 
         /// <summary>
         /// Length of the data to read.
@@ -215,15 +313,18 @@ namespace SJ
         /// Get a character at <paramref name="i"/>.
         /// <br><b>Note:</b> This can receive OOB reads, generally at <paramref name="i"/> == <see cref="Length"/></br>
         /// <br>In this case, it is necessary to handle that exact condition with '\0' / EOF character of your choice.</br>
+        /// <br>If reading from a stream, this should maybe seek within the index buffer or go back to the "approximate position" or refer to the underlying "string buffer"</br>
         /// </summary>
-        protected abstract char At(int i);
+        public abstract char At(int i);
         /// <summary>
-        /// Create a "char" slice, starting from <paramref name="start"/> with <paramref name="length"/>.
+        /// Create a literal "char" slice, starting from <paramref name="start"/> with <paramref name="length"/> on the data source.
+        /// <br>Used for the <see cref="Value"/>'s <see cref="Value.Slice"/></br>
         /// </summary>
-        protected abstract ReadOnlySpan<char> Slice(int start, int length);
+        public abstract ReadOnlySpan<char> Slice(int start, int length);
 
         /// <summary>
-        /// <see cref="SJType.Number"/> continuation check, Note that this reader does no parsing or unescaping.
+        /// <see cref="SJType.Number"/> continuation check, Note that this reader 
+        /// does no parsing or unescaping, so number validation must be done by external code.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected static bool IsNumberContinuation(char c) => (c >= '0' && c <= '9') || c == 'e' || c == 'E' || c == '.' || c == '-' || c == '+';
@@ -240,74 +341,99 @@ namespace SJ
         /// It will fail on white space intentionally, but won't set error (because it isn't comment).
         /// You should check <c>At(current) == '/' &amp;&amp; <see cref="SkipComment"/></c></br>
         /// </summary>
-        /// <returns>Whether if the comment block was valid. If <see cref="ThrowOnError"/> is set, this method will throw.</returns>
+        /// <returns>Whether if the comment block was valid.</returns>
         protected bool SkipComment()
         {
-            if (current < Length)
+            (int start, int end) = GetCommentRange(true);
+            if (start >= 0 && end >= 0)
+            {
+                current = end;
+                return true;
+            }
+
+            return false;
+        }
+        /// <summary>
+        /// Read a range of comments, starting from <see cref="current"/> for the reader data.
+        /// </summary>
+        /// <param name="setError">Set <see cref="Error"/> if the comment block is invalid.</param>
+        /// <returns>Start and ending range. If the block isn't a comment, -1 is returned for both regions</returns>
+        protected (int start, int end) GetCommentRange(bool setError)
+        {
+            int start = current, end = current;
+            if (start < Length)
             {
                 // I should validate the current character twice, for external uses.
-                char ch = At(current);
+                char ch = At(end);
                 if (ch == '/')
                 {
-                    char next = At(++current);
+                    char next = At(++end);
                     if (next == '/')
                     {
                         while (ch != '\n')
                         {
-                            if (current >= Length)
+                            if (end >= Length)
                             {
                                 // Ended with // .... <EOF
-                                return true;
+                                return (start, end);
                             }
 
-                            ch = At(++current);
+                            ch = At(++end);
                         }
 
-                        // the whitespace '\n' will be implicitly skipped.
-                        return true;
+                        // include '\n'
+                        end += 1;
+                        return (start, end);
                     }
                     else if (next == '*')
                     {
-                        while (ch != '*' && next != '/')
+                        while (!(ch == '*' && next == '/'))
                         {
-                            if (current >= Length)
+                            if (end >= Length)
                             {
-                                Error = $"Expected */, got '{Tk(ch)}+{Tk(next)}'";
-                                return false;
+                                if (setError)
+                                {
+                                    Error = $"Expected */, got '{Tk(ch)}+{Tk(next)}'";
+                                }
+                                return (-1, -1);
                             }
 
-                            ch = At(++current);
-                            next = At(current + 1);
+                            ch = At(++end);
+                            next = At(end + 1);
                         }
 
-                        // skip the '*/' (as those are actual non-ws chars)
-                        current += 2;
-                        return true;
+                        // include '*/'
+                        end += 2;
+                        return (start, end);
                     }
                     else
                     {
-                        Error = $"Unexpected comment token '{Tk(next)}', expected '/ or *'";
-                        return false;
+                        if (setError)
+                        {
+                            Error = $"Unexpected comment token '{Tk(next)}', expected '/ or *'";
+                        }
+                        return (-1, -1);
                     }
                 }
                 else
                 {
-                    return false;
+                    // Not skipping while on a comment block
+                    return (-1, -1);
                 }
             }
 
-            // Nothing to skip
-            return true;
+            // Nothing to skip, but not an "error"
+            return (-1, -1);
         }
         /// <summary>
         /// Check remaining tokens after the JSON document is finished. (depth == 0)
         /// <br>Does parsing of comments if <see cref="allowComments"/></br>
         /// </summary>
         /// <returns>
-        /// <see langword="false"/> if the ending has invalid characters. <see langword="true"/> if the document ending is valid.
-        /// The <see cref="Error"/> value is assigned with relevant detail.
+        /// <see langword="false"/> if the ending has invalid characters. <see langword="true"/> if the document 
+        /// ending is valid <b>or the code must yield, if <see cref="captureComments"/>.</b>
         /// </returns>
-        protected bool CheckEOF()
+        protected bool UpdateEnding()
         {
             if (depth < 0)
             {
@@ -321,10 +447,19 @@ namespace SJ
 
                 if (allowComments && ch == '/')
                 {
-                    if (!SkipComment())
+                    if (!captureComments)
                     {
-                        Error = $"[end] {Error}";
-                        return false;
+                        if (!SkipComment())
+                        {
+                            Error = $"[end] {Error}";
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        // Yield for parsing the comment line as current points to == '/',
+                        // as it's "not EOF" and "more data available"
+                        return true;
                     }
                 }
                 else if (!char.IsWhiteSpace(ch))
@@ -334,8 +469,78 @@ namespace SJ
                 }
             }
 
+            // more data available.
             return true;
         }
+
+        /// <summary>
+        /// Check last <see cref="State"/> on the stack according to the rules.
+        /// <br>It also validates <paramref name="v"/> and can mutate that value as well</br>
+        /// </summary>
+        /// <returns><see langword="true"/> if the state is valid, otherwise you should yield back to top.</returns>
+        protected virtual bool UpdateState(ref State cs, ref Value v)
+        {
+            if (cs.invalid)
+            {
+                // Supplying "invalid" state means you probably put the stub state in.
+                // Which means there was no state to update..
+                return true;
+            }
+            if (v.type == SJType.Comment)
+            {
+                return true;
+            }
+
+            switch (cs.type)
+            {
+                case SJType.Object:
+                    if ((cs.expect & Expect.Key) == Expect.Key)
+                    {
+                        if (v.type != SJType.String)
+                        {
+                            Error = "Expected object key as Key type (String)";
+                            return false;
+                        }
+                        v.type = SJType.Key;
+
+                        cs.expect &= ~Expect.Key;
+                        cs.expect |= Expect.Colon;
+                    }
+                    else
+                    {
+                        cs.valueCount++;
+                        cs.expect &= ~Expect.Colon;
+                        cs.expect |= Expect.Comma | Expect.Key;
+                    }
+                    break;
+                case SJType.Array:
+                    cs.valueCount++;
+                    cs.expect |= Expect.Comma;
+                    break;
+                default:
+                    Error = $"Invalid current state type {cs.type}";
+                    return false;
+            }
+
+            return true;
+        }
+        /// <summary>
+        /// If <b>no new state is pushed</b> to the stack on <see cref="Read"/>, you don't need to track state and can use this method instead.
+        /// </summary>
+        /// <remarks>
+        /// Returns <see langword="true"/> if no state exists, meaning there isn't any state to check.
+        /// </remarks>
+        /// <returns><see langword="true"/> if the state is valid, otherwise you should yield back to top.</returns>
+        protected bool UpdateLastState(ref Value v)
+        {
+            if (!HasState)
+            {
+                return true;
+            }
+
+            return UpdateState(ref PeekState(), ref v);
+        }
+
         /// <summary>
         /// Throws the currently stored error. It does not check whether if an error is available.
         /// </summary>
@@ -351,14 +556,14 @@ namespace SJ
         /// </summary>
         public virtual Value Read()
         {
-            lastRecursableTypes ??= new Stack<SJType>();
             var result = new Value(this);
+            ended = !string.IsNullOrEmpty(Error);
         _Top:
             if (!string.IsNullOrEmpty(Error))
             {
                 result.type = SJType.Error;
                 result.start = result.end = 0;
-                result.depth = -1;
+                result.objectDepth = -1;
                 return result;
             }
             if (Length <= 0)
@@ -368,8 +573,16 @@ namespace SJ
             }
             if (current >= Length)
             {
-                Error = "Reached EOF";
-                goto _Top;
+                // Reaching end of document is no longer an error, but it should return an empty "error" value.
+                result.type = SJType.Error;
+                result.start = result.end = current;
+                result.objectDepth = -1;
+                ended = true;
+                if (depth > 0)
+                {
+                    Error = PeekState().type switch { SJType.Object => "Unclosed object", SJType.Array => "Unclosed array", _ => "Unclosed with invalid stack type" };
+                }
+                return result;
             }
             if (maxDepth > 0 && depth > maxDepth)
             {
@@ -385,52 +598,127 @@ namespace SJ
                 current++;
                 goto _Top;
             }
-            // Validate : Comments
+            // Validate / Parse : Comments
             else if (allowComments && ch == '/')
             {
-                // Perhaps I could have added a "SJType.Comment" Value, but the problems are :
-                // 1: Comments can be placed anywhere and are not "strictly structured"
-                // 2: Comments will require calling Read() (not a big problem) and doing while (!EOF) {} (is the bigger problem.
-                // the top "reading call stack" is popped without any "moving forward" and the chance for an error to be thrown)
-                // Though they aren't recursive, so that's a "bonus".
-                // I could add it later, requiring calling "Read" and yielding back when the SJType is Comment (also checking EOF?)
-                // To not break compatibility, I could add "ignoreComments = true" by default to skip comments while reading.
-                SkipComment(); // This sets Error
+                if (!captureComments)
+                {
+                    SkipComment();
+                }
+                else
+                {
+                    result.type = SJType.Comment;
+                    (result.start, result.end) = GetCommentRange(true);
+                    if (string.IsNullOrEmpty(Error) && result.start >= 0 && result.end > 0)
+                    {
+                        current = result.end;
+                        return result;
+                    }
+                }
                 goto _Top;
             }
             // Validate : Object == KV Colon, Array == Comma
             else if (ch == ':' || ch == ',')
             {
-                if (lastRecursableTypes.TryPeek(out SJType lastType))
+                if (HasState)
                 {
+                    ref State s = ref PeekState();
                     if (ch == ':')
                     {
-                        if (lastType == SJType.Array)
+                        if (s.type != SJType.Object)
                         {
-                            Error = "Unexpected ':' in array";
+                            Error = "Unexpected ':' in top level array";
                             goto _Top;
                         }
-                        else if (_ColonsRequired == 0)
+                        else if ((s.expect & Expect.Colon) != Expect.Colon)
                         {
                             Error = "Unexpected ':', exceeding required";
                             goto _Top;
                         }
 
-                        _ColonsRequired = Math.Max(-1, _ColonsRequired - 1);
+                        s.expect &= ~Expect.Colon;
+                    }
+                    else if (ch == ',')
+                    {
+                        // both Array and Object get commas
+                        if ((s.expect & Expect.Comma) != Expect.Comma)
+                        {
+                            Error = "Unexpected ',', exceeding required";
+                            goto _Top;
+                        }
+
+                        s.expect &= ~Expect.Comma;
+                    }
+                    else
+                    {
+                        // Unreachable
+                        Error = $"ch '{Tk(ch)}' was somehow mutated on comma/colon check and no longer pleases any condition";
+                        goto _Top;
                     }
                 }
                 else
                 {
-                    Error = "Unexpected ':' or ',' in toplevel";
+                    Error = "Unexpected ':' or ',' in top level nothing";
                 }
 
                 current++;
                 goto _Top;
             }
-            else if (_ColonsRequired > 0)
+            else if ((PeekState().expect & Expect.Colon) == Expect.Colon)
             {
-                Error = $"Unknown token '{Tk(ch)}', expected ':'";
+                // Colons are strict, they are seperator for key/value
+                Error = $"Unexpected '{Tk(ch)}', expected ':'";
                 goto _Top;
+            }
+            // Parse : Array | Object End (must override comma)
+            else if (ch == '}' || ch == ']')
+            {
+                result.type = SJType.End;
+                // Validate last state and update "topmost current state"
+                State s = PopState();
+                if (depth < 0 || s.type != ((ch == '}') ? SJType.Object : SJType.Array))
+                {
+                    Error = (ch == '}') ? "Stray '}'" : "Stray ']'";
+                    goto _Top;
+                }
+                if (s.valueCount > 0 && (s.expect & Expect.Comma) != Expect.Comma)
+                {
+                    Error = "Trailing comma character for the last value before end";
+                    goto _Top;
+                }
+
+                ch = At(++current);
+                result.end = current;
+
+                // UpdateState here is not needed because the upper state will be checked later
+                if (!UpdateEnding())
+                {
+                    goto _Top;
+                }
+            }
+            // Validate: Commas
+            else if ((PeekState().expect & Expect.Comma) == Expect.Comma)
+            {
+                // Commas are more flexible and can be found anywhere else,
+                // however they are not required for object declarations,
+                // but they are required for literals and object endings.
+                Error = $"Unknown token '{Tk(ch)}', expected ','";
+                goto _Top;
+            }
+            // Parse : Array | Object Start
+            else if (ch == '{' || ch == '[')
+            {
+                result.type = ch == '{' ? SJType.Object : SJType.Array;
+                ref State prev = ref PeekState();
+                PushState(new State(result.type, ch == '{' ? Expect.Key : Expect.None));
+
+                result.objectDepth = depth;
+                ch = At(++current);
+
+                if (!UpdateState(ref prev, ref result))
+                {
+                    goto _Top;
+                }
             }
             // Parse : Number
             else if (char.IsDigit(ch) || ch == '-')
@@ -442,7 +730,7 @@ namespace SJ
                 }
                 result.end = current;
 
-                if (!CheckEOF())
+                if (!UpdateLastState(ref result) || !UpdateEnding())
                 {
                     goto _Top;
                 }
@@ -474,35 +762,7 @@ namespace SJ
                 }
                 result.end = current++;
 
-                if (!CheckEOF())
-                {
-                    goto _Top;
-                }
-                return result;
-            }
-            // Parse : Array | Object
-            else if (ch == '{' || ch == '[')
-            {
-                result.type = (ch == '{') ? SJType.Object : SJType.Array;
-                lastRecursableTypes.Push(result.type);
-                result.depth = ++depth;
-                ch = At(++current);
-            }
-            else if (ch == '}' || ch == ']')
-            {
-                result.type = SJType.End;
-                depth--;
-                SJType lastType = lastRecursableTypes.Pop();
-                if (depth < 0 || lastType != ((ch == '}') ? SJType.Object : SJType.Array))
-                {
-                    Error = (ch == '}') ? "Stray '}'" : "Stray ']'";
-                    goto _Top;
-                }
-
-                ch = At(++current);
-                result.end = current;
-
-                if (!CheckEOF())
+                if (!UpdateLastState(ref result) || !UpdateEnding())
                 {
                     goto _Top;
                 }
@@ -511,27 +771,27 @@ namespace SJ
             else if (ch == 'n' || ch == 't' || ch == 'f')
             {
                 result.type = (ch == 'n') ? SJType.Null : SJType.Bool;
-
-                if (Slice(current, 4).Equals("null", StringComparison.Ordinal))
+                int remaining = Length - current;
+                if (Slice(current, Math.Min(remaining, 4)).Equals("null", StringComparison.Ordinal))
                 {
                     current += 4;
                 }
-                else if (Slice(current, 5).Equals("false", StringComparison.Ordinal))
+                else if (Slice(current, Math.Min(remaining, 4)).Equals("true", StringComparison.Ordinal))
+                {
+                    current += 4;
+                }
+                else if (Slice(current, Math.Min(remaining, 5)).Equals("false", StringComparison.Ordinal))
                 {
                     current += 5;
                 }
-                else if (Slice(current, 4).Equals("true", StringComparison.Ordinal))
-                {
-                    current += 4;
-                }
                 else
                 {
-                    Error = $"Unknown token '{Tk(ch)}'";
+                    Error = $"Unknown token '{Tk(ch)}' or truncated literal";
                     goto _Top;
                 }
                 result.end = current;
 
-                if (!CheckEOF())
+                if (!UpdateLastState(ref result) || !UpdateEnding())
                 {
                     goto _Top;
                 }
@@ -551,71 +811,147 @@ namespace SJ
         protected void DiscardUntil(int depth)
         {
             var value = Value.Null();
-            while (this.depth != depth && value.type != SJType.Error)
+            while (!ended && this.depth != depth && value.type != SJType.Error)
             {
                 value = Read();
             }
         }
         /// <summary>
-        /// Iterate the values of <paramref name="arrayValue"/> if it's an <see cref="SJType.Array"/>.
+        /// Iterate <see cref="SJType.Array"/> typed <paramref name="value"/> with entry type info.
         /// </summary>
-        public bool IterateArray(Value arrayValue, out Value result)
+        /// <param name="type">Type of the entry. This is either <see cref="EntryType.Value"/> or <see cref="EntryType.None"/>.</param>
+        /// <returns>Whether if more data is available to read from <paramref name="value"/>.</returns>
+        public bool IterateArrayEntries(Value value, out Value result)
         {
-            if (arrayValue.type != SJType.Array)
+            if (value.type != SJType.Array)
             {
                 result = Value.Error(this);
                 return false;
             }
 
-            // ↓ if the array contains other recursive elements, this dives and goes back to the current array depth
-            DiscardUntil(arrayValue.depth);
+            DiscardUntil(value.objectDepth);
+            ref State current = ref PeekState();
             result = Read();
-            return result.type != SJType.Error && result.type != SJType.End;
+            if (result.type == SJType.Comment)
+            {
+                return true;
+            }
+
+            current.valueCount++;
+            current.expect |= Expect.Comma;
+            if (result.type != SJType.Error && result.type != SJType.End)
+            {
+                return true;
+            }
+            return false;
         }
         /// <summary>
-        /// Iterate the key/value of <paramref name="objectValue"/> if it's an <see cref="SJType.Object"/>.
+        /// Iterate <see cref="SJType.Array"/> typed <paramref name="value"/>.
         /// </summary>
-        public bool IterateObject(Value objectValue, out Value key, out Value value)
+        /// <remarks>
+        /// <b>This skips <see cref="SJType.Comment"/> blocks (for compatibility) regardless 
+        /// of <see cref="captureComments"/>' value. If you want to capture comments 
+        /// while reading a JSON object, use lower level method of
+        /// <see cref="IterateArrayEntries(Value, out EntryType, out Value)"/> instead.</b>
+        /// </remarks>
+        /// <returns>Whether if more data is available to read from <paramref name="value"/>.</returns>
+        public bool IterateArray(Value value, out Value result)
         {
-            if (objectValue.type != SJType.Object)
+            while (IterateArrayEntries(value, out var v))
             {
-                key = value = Value.Error(this);
+                if (v.type != SJType.Comment)
+                {
+                    result = v;
+                    return true;
+                }
+            }
+
+            result = Value.Error(this);
+            return false;
+        }
+        /// <summary>
+        /// Iterate <see cref="SJType.Object"/> typed <paramref name="value"/> with entry type info.
+        /// </summary>
+        /// <returns>Whether if more data is available to read from <paramref name="value"/>.</returns>
+        public bool IterateObjectEntries(Value value, out Value result)
+        {
+            if (value.type != SJType.Object)
+            {
+                result = Value.Error(this);
                 return false;
             }
 
-            DiscardUntil(objectValue.depth);
-            key = Read();
-            if (key.type == SJType.Error || key.type == SJType.End)
+            DiscardUntil(value.objectDepth);
+            result = Read();
+            if (result.type == SJType.Error || result.type == SJType.End)
             {
-                value = Value.Error(this);
+                result = Value.Error(this);
                 return false;
             }
-            if (key.type != SJType.String)
+            if (result.type == SJType.Comment)
             {
-                value = Value.Error(this);
-                Error = "Expected String as key";
-                return false;
+                return true;
             }
 
-            _ColonsRequired = 1;
-            value = Read();
-            if (value.type == SJType.Error)
+            // SJType.Key is just promoted SJType.String
+            if (result.type == SJType.Key)
             {
-                return false;
+                LastEntryKey = result;
             }
-            if (value.type == SJType.End)
-            {
-                Error = "Unexpected object end";
-                return false;
-            }
-            _ColonsRequired = -1;
-
             return true;
         }
         /// <summary>
+        /// Iterate <see cref="SJType.Object"/> typed <paramref name="object"/> value.
+        /// </summary>
+        /// <remarks>
+        /// <b>This skips <see cref="SJType.Comment"/> blocks regardless of <see cref="captureComments"/>' value.
+        /// If you want to capture comments while reading a JSON object, use lower level method of
+        /// <see cref="IterateObjectEntries(Value, out EntryType, out Value)"/> instead.</b>
+        /// <br>Calling <see cref="IterateObject(Value, out Value, out Value)"/> with an existing key 
+        /// value will use that key value and poll for it's value, unless the value for that key was already read, 
+        /// which in this case, this method will return the next key/value.
+        /// Otherwise, this method will return the previous key/next unread value (if exists)</br>
+        /// </remarks>
+        /// <returns>Whether if more data is available to read from <paramref name="object"/>.</returns>
+        public bool IterateObject(Value @object, out Value key, out Value value)
+        {
+            bool gotKey = false; key = default;
+            while (IterateObjectEntries(@object, out Value result))
+            {
+                if (!string.IsNullOrEmpty(Error) || result.type == SJType.Error || result.type == SJType.End)
+                {
+                    key = value = Value.Error(this);
+                    return false;
+                }
+
+                switch (result.type)
+                {
+                    case SJType.Comment:
+                        continue;
+
+                    case SJType.Key:
+                        key = result;
+                        gotKey = true;
+                        continue;
+
+                    default:
+                        if (!gotKey)
+                        {
+                            key = LastEntryKey;
+                        }
+                        value = result;
+                        return true;
+                }
+            }
+            // did not find next Value, or IterateObject returned error.
+            key = value = Value.Error(this);
+            return false;
+        }
+
+        /// <summary>
         /// Get the current readout location.
         /// </summary>
-        public bool Location(out int line, out int column)
+        public virtual bool Location(out int line, out int column)
         {
             if (Length <= 0)
             {
@@ -645,14 +981,16 @@ namespace SJ
         }
         /// <summary>
         /// Reset the read state.
-        /// <br>This is called when <see cref="Data"/> is set to a new value.</br>
         /// </summary>
-        public void Reset()
+        /// <remarks>
+        /// <br><b>This shouldn't discard data and only reset the state.</b>(should have called it flush award)</br>
+        /// </remarks>
+        public virtual void Reset()
         {
-            current = 0;
-            depth = 0;
+            current = depth = 0;
+            LastEntryKey = default;
             Error = null;
-            lastRecursableTypes?.Clear();
+            ended = false;
         }
 
         public override string ToString()

@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Text;
+﻿#pragma warning disable CA1510 // Use ArgumentNullException throw helper
+#nullable disable
 
-namespace SJ.Examples
+using System.Globalization;
+
+namespace BX.SJ.Tests.Examples
 {
-    // A basic tree structure.
+    // A basic tree structure. Used for testing, but also available in the Examples
     internal sealed class SJTree
     {
         // Since the SJ value is lazily evaluated, we should copy the data here too.
@@ -32,7 +32,6 @@ namespace SJ.Examples
             {
                 throw new ArgumentNullException(nameof(tree));
             }
-
             if (reader is null)
             {
                 throw new ArgumentNullException(nameof(reader));
@@ -43,7 +42,10 @@ namespace SJ.Examples
                 throw new ArgumentException($"Given SJReader has an error : {reader.Error}", nameof(reader));
             }
 
-            WriteFromInternal(tree, reader, reader.Read());
+            for (var root = reader.Read(); !reader.ended; root = reader.Read())
+            {
+                WriteFromInternal(tree, reader, root);
+            }
         }
         private static void WriteFromInternal(SJTree tree, SJReader reader, SJReader.Value root)
         {
@@ -56,8 +58,8 @@ namespace SJ.Examples
                     {
                         // Throw the error with one of the following methods
                         // 1. reader.ThrowError = true; → Mutates the reader. Could be undesired if exception is being caught.
-                        // 2. throw new SJReader.ReadException(reader); → Throws error without changing the reader
-                        // 3. reader.ThrowError(); → Less verbose and easy
+                        // 2. throw new SJReader.ReadException(reader); → Throws error without changing 
+                        // 3. reader.ThrowError(); → Less verbose
                         reader.ThrowError();
                         break;
                     }
@@ -79,7 +81,7 @@ namespace SJ.Examples
                     }
                 case SJType.Object:
                     {
-                        while (reader.IterateObject(root, out var k, out var v))
+                        while (reader.IterateObject(root, out SJReader.Value k, out SJReader.Value v))
                         {
                             var node = new SJTree();
                             WriteFromInternal(node, reader, v);
@@ -123,7 +125,7 @@ namespace SJ.Examples
         public static string ToJSON(SJTree tree, SJWriter writer)
         {
             WriteTo(tree, writer);
-            return writer.ToString() ?? "";
+            return writer.ReadData() ?? "";
         }
         public static void WriteTo(SJTree tree, SJWriter writer)
         {
@@ -182,6 +184,7 @@ namespace SJ.Examples
 
         public override string ToString()
         {
+            // Preview tree as JSON, though should do this if the object isn't that large.
             return ToJSON(this, new SJStringWriter()
             {
                 ThrowOnError = true,
@@ -189,38 +192,7 @@ namespace SJ.Examples
             });
         }
     }
-
-    sealed class Tree
-    {
-        const string TestData = @"{
-  ""numbers"": [0, -1, 1.23, 1.0e-5, 1000000],
-  ""strings"": {
-    ""basic"": ""Hello World"",
-    ""escaped"": ""Quote: \"", Backslash: \\, Tab: \t, Newline: \n"",
-    ""unicode_BMP"": ""Euro: \u20AC"",
-    ""emoji_surrogate"": ""Pizza: \uD83C\uDF55"",
-    ""emoji_with_variant"": ""The 🅱 variant: \uD83C\uDD71\uFE0F"",
-    ""raw_emoji"": ""🍕"",
-    ""non_ascii_literal"": ""你好, ¡Hola!, Grüße""
-  },
-  ""nesting"": [
-    {
-      ""depth_1"": [
-        { ""depth_2"": ""We're deep now"" }
-      ]
-    }
-  ],
-  ""logic"": [true, false, null],
-  ""empty"": { ""obj"": {}, ""arr"": [] }
-}";
-
-        static void Main(string[] args)
-        {
-            string data = args.Length > 1 ? args[1] : TestData;
-            var reader = new SJStringReader(data);
-            var tree = SJTree.FromJSON(reader);
-
-            Console.WriteLine($"Parsed Tree : {tree}");
-        }
-    }
 }
+
+#nullable restore
+#pragma warning restore CA1510

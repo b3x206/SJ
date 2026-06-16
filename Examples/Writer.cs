@@ -1,14 +1,12 @@
-﻿using System;
-
-namespace SJ.Examples
+﻿namespace BX.SJ.Tests.Examples
 {
     internal sealed class Writer
     {
-        static void Main(string[] args)
+        public static void TMain(string[] args)
         {
             var writer = new SJStringWriter()
             {
-                // Enable pretty printing
+                // Enable pretty printing. Setting this 0 or less will disable pretty printing.
                 indentSize = 4,
                 // Don't throw on error for now
                 ThrowOnError = false,
@@ -39,7 +37,10 @@ namespace SJ.Examples
                 writer.Write(5);
             } // writer.EndArray();
               // ↑ The array will end automatically once you go out of using scope.
+            Console.WriteLine($"Result Array : {writer.ReadData()}");
 
+            // To not throw here, reset before writing another root level object..
+            writer.Reset();
             using (writer.Object()) // Or writer.BeginObject();
             {
                 // You must write key the following way:
@@ -61,11 +62,9 @@ namespace SJ.Examples
                 //   not expecting a value before doing this.
 
                 // It is possible to nest objects. It will also be auto indented too with pretty printing:
-                writer.WriteKey("numbers that i like");
-                using (writer.Object())
+                using (writer.ObjectKV("numbers that i like"))
                 {
-                    writer.WriteKey("in childhood");
-                    using (writer.Array())
+                    using (writer.ArrayKV("in childhood"))
                     {
                         writer.Write(3.141592); // Larp pro max
                         writer.Write(2); // It's nice
@@ -80,8 +79,8 @@ namespace SJ.Examples
             } // writer.EndObject();
               // ↑ The object will end automatically once you go out of using scope.
 
-            // Output the resulting JSON like this: (ToString)
-            Console.WriteLine($"Result Object : {writer}");
+            // Output the resulting JSON like this: (ReadData)
+            Console.WriteLine($"Result Object : {writer.ReadData()}");
         }
     }
 }

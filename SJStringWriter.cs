@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Text;
 
-namespace SJ
+namespace BX.SJ
 {
     /// <summary>
     /// Writes JSON to a <see cref="StringBuilder"/>
@@ -31,14 +31,13 @@ namespace SJ
         public override void Append(char c) => sb.Append(c);
         public override void Append(ReadOnlySpan<char> s) => sb.Append(s);
 
+        public override bool CanReadData => true;
+        public override string ReadData() => sb.ToString();
+
         public override void Reset()
         {
             base.Reset();
             sb.Clear();
-        }
-        public override string ToString()
-        {
-            return sb.ToString();
         }
     }
 }
