@@ -9,7 +9,7 @@ namespace BX.SJ
     /// <example>
     /// <![CDATA[
     /// // This example shows how you can recursively read from a SJReader
-    /// using SJ;
+    /// using BX.SJ;
     /// using System.Text;
     /// 
     /// var data = "{ \"foo\": [\"bar\", \"baz\"], \"idk\": 42, \"mango\": { \"6\": 7 } }";

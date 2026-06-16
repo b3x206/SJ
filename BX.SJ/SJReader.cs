@@ -29,7 +29,7 @@ namespace BX.SJ
     /// </summary>
     /// <example>
     /// <![CDATA[
-    /// using SJ;
+    /// using BX.SJ;
     /// using System;
     /// 
     /// // An example class would look like this:

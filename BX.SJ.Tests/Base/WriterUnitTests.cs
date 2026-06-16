@@ -148,6 +148,12 @@ public abstract class WriterUnitTests<TWriter> where TWriter : SJWriter
         var writer = CreateWriter();
         try
         {
+            if (!writer.CanReadData)
+            {
+                Assert.Inconclusive($"[!] Cannot test '{writer.GetType()}' as data can't be read.");
+                return;
+            }
+
             const string Comment = "Hello world!";
 
             writer.allowComments = true;

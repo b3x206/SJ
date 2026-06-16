@@ -1,6 +1,6 @@
 ﻿# BX.SJ
 
-Yet another "low level" JSON parser + writer for C#.
+JSON compatible parser + writer for C#.
 
 Loosely based on [sj.h](https://github.com/rxi/sj.h).
 
@@ -8,20 +8,18 @@ This branch (`devel`) is where development is done, before getting packed into "
 
 ## Notes
 
-#### 1
-This will likely _never be_ a **"100% correct" parser**, also what it does with the data (outside of the JSON tokens) ultimately depends on what you read from the parsed chunks. It also _may fail_ on correct or _may not fail_ on wrong sequences. Use at your own risk.
+1. This will likely _never be_ a **"100% correct" parser**, also what it does with the data (outside of the JSON tokens) ultimately depends on what you read from the parsed chunks. <br>
+  It also _may fail_ on correct or _may not fail_ on wrong sequences. **Use at your own risk.**
 
-#### 2
-Because of
-* C#-ifying the code
-* Improving "correctness"
-* And adding comment support.
+2. Because of
+  * C#-ifying the code
+  * Improving "correctness"
+  * And adding comment support.
+  * With more tests, as it will be (one of) the backbone(s) for my save system. <br>
+  The code is **more complicated and less concise.**
 
-The code is **more complicated.** But I have taken the decision to make it simpler on `master`. Pushing here won't update `master` branch (yet), but I will do that sometime, where source is generated on push to `devel` for `master`..
-
-#### 3
-"Stable" SJ releases are the ones that are tagged with semver. <br>
-_(all tests pass, benchmarks are consistent, slightly worse or slightly improved and it doesn't regress too much)_
+3.  "Stable" SJ releases are the ones that are tagged with semver. <br>
+_(all tests pass, benchmarks are consistent, slightly worse or slightly improved and it doesn't regress too much)_ <br>
 
 ## Examples
 
@@ -31,7 +29,7 @@ Use the [`SJStringReader`](./SJ/SJStringReader.cs) class to get started.
 
 ```cs
 // A basic object deserialization example. Non-recursive.
-using SJ;
+using BX.SJ;
 using System;
 using System.Numerics;
 using System.Globalization;
@@ -59,15 +57,16 @@ static Vector3 ReadVector3(SJReader reader, SJReader.Value root)
 const string data = @"{ ""x"": 42.0, ""y"": -42.0, ""z"": 0.0 }";
 var reader = new SJStringReader(data);
 
-SJReader.Value root = reader.Read();
-Console.WriteLine($"Saved Position : {ReadVector3(reader, root)}");
+for (SJReader.Value root = reader.Read(); !reader.ended; root = reader.Read())
+{
+    Console.WriteLine($"Saved Position : {ReadVector3(reader, root)}");
+}
 ```
-
 
 If processing comments are desired, you should read the document like this: <br>
 _In fact, you should read most documents like this._
 ```cs
-using SJ;
+using BX.SJ;
 using System;
 
 static void InspectConfigData(SJReader reader, SJReader.Value root)
@@ -149,6 +148,8 @@ switch (SJReader.Value.type)
     {
         string result = SJEscape.Unescape(SJReader.Value.Slice());
         // `SJEscape.Escape(string | ReadOnlySpan<char>)` is for the other way around...
+        // If you want to allocate less, use SJEscape.Unescape with the append delegate.
+        // In future I may add something like "Escaper" with it's state like "Encoder"
         break;
     }
 }
@@ -161,12 +162,12 @@ This is used as the default string escape for the Writer.
 Use the [`SJStringWriter`](SJ/SJStringWriter.cs) class to get started.
 
 ```cs
-using SJ;
+using BX.SJ;
 using System;
 using System.Numerics;
 using System.Globalization;
 
-static Vector3 ReadVector3(SJReader reader, SJReader.Value root) ... // Copy the method from above Vector3 reader
+static Vector3 ReadVector3(SJReader reader, SJReader.Value root) { /*...*/ } // Copy the method from above Vector3 reader
 
 // Serialize an arbitrary Vector3
 var writer = new SJStringWriter()
@@ -189,7 +190,7 @@ var reader = new SJStringReader(data);
 position = ReadVector3(reader, reader.Read());
 
 // Use ReadData to read the resulting string.
-Console.WriteLine($"Saved Position : {data.ReadData()}, Read Position : {position}");
+Console.WriteLine($"Saved Position : {data}, Read Position : {position}");
 ```
 
 ### Benchmarks
@@ -198,20 +199,31 @@ Console.WriteLine($"Saved Position : {data.ReadData()}, Read Position : {positio
 * ReadLarge = Read a [large file (5mb.json)](TestFiles/5mb.json) 32 times
 * Write = Write few kb of JSON (`{ "random_key": "random_value", ... 512 entries }`) 256 times
 * WriteLarge = Write ~500kb JSON (`{ "random_key": "random_value", ... 16384 entries }`) 32 times
+* Baseline = Do the same action, just without processing.
 
 Classes used are [`SJStringReader`](./SJ/SJStringReader.cs) and [`SJStringWriter`](SJ/SJStringWriter.cs)
 
-`ReaderBenchmarks`
+```
+
+BenchmarkDotNet v0.15.8, Linux Debian GNU/Linux 13 (trixie)
+13th Gen Intel Core i7-13620H 2.92GHz, 1 CPU, 16 logical and 8 physical cores
+.NET SDK 8.0.421
+  [Host]     : .NET 8.0.27 (8.0.27, 8.0.2726.22922), X64 RyuJIT x86-64-v3
+  DefaultJob : .NET 8.0.27 (8.0.27, 8.0.2726.22922), X64 RyuJIT x86-64-v3
+
+```
+
+#### ReaderBenchmarks
 
 | Method             | Mean        | Error     | StdDev    | Ratio      | RatioSD  | Allocated | Alloc Ratio |
 |--------------------|------------:|----------:|----------:|-----------:|---------:|----------:|------------:|
-| ReadLargeBaseline  |   3.5105 ms | 0.0200 ms | 0.0177 ms |       1.00 |     0.01 |         - |          NA |
-| ReadLarge          | 408.2533 ms | 1.4103 ms | 1.3192 ms |     116.30 |     0.67 |         - |          NA |
-|                    |             |           |           |            |          |           |             |
 | ReadBaseline       |   0.0392 ms | 0.0001 ms | 0.0001 ms |       1.00 |     0.00 |         - |          NA |
 | Read               |  36.6612 ms | 0.2419 ms | 0.2263 ms |     935.90 |     6.17 |         - |          NA |
+|                    |             |           |           |            |          |           |             |
+| ReadLargeBaseline  |   3.5105 ms | 0.0200 ms | 0.0177 ms |       1.00 |     0.01 |         - |          NA |
+| ReadLarge          | 408.2533 ms | 1.4103 ms | 1.3192 ms |     116.30 |     0.67 |         - |          NA |
 
-`WriterBenchmarks`
+#### WriterBenchmarks
 
 | Method             | Mean        | Error     | StdDev    | Ratio      | RatioSD  | Gen0   | Allocated | Alloc Ratio |
 |------------------- |------------:|----------:|----------:|-----------:|---------:|-------:|----------:|------------:|
@@ -222,9 +234,10 @@ Classes used are [`SJStringReader`](./SJ/SJStringReader.cs) and [`SJStringWriter
 | WriteLarge         |  45.7750 ms | 0.1747 ms | 0.1548 ms | 575,208.09 | 2,453.84 |      - |     168 B |        1.00 |
 
 
-**Note:** I'm not good at writing benchmarks and these were not tested in 100% optimal situation (hence the baseline being too large on some "benches"). Also, the speed could be worse than this as other code will run alongside it.
+**Note:** I'm not really good at writing benchmarks and these were not tested in 100% optimal situation (hence the ratio being too large on some "benches").
+Also, the speed could be worse than this as other code will run alongside it.
 
-_I speculate that_ the lack of performance could be caused by excessive bound checking + redundant state for the Reader, the Escape that Writer does and other many factors (using netstandard build too maybe)..
+_I speculate that_ the lack of performance could be caused by excessive bound checking + redundant state for the Reader, the Escape that Writer does and other many factors (using netstandard2 build could also contribute too, maybe.)..
 
 ---
 
@@ -265,7 +278,15 @@ You can also use the [unit tests](./SJ.Tests) as examples too.
 **▶ SJEscape**
 * String escaping is now faster
 * Removed UCS-2 style escaping surrogate pairs (for speed reasons)
-* Tested _slightly better_
+
+**▶ Tests**
+* Allow supplying of a custom class inheriting SJ classes
+* Add more coverage
+* Ensure the logic matches the usage and changes, doing logic now requires 
+
+**▶ Benchmarks**
+* Allow supplying of a custom class inheriting SJ classes
+* Improve writer benchmark
 
 The inner workings have been reworked partially..
 
@@ -273,7 +294,7 @@ The inner workings have been reworked partially..
 
 <summary>• Migration from 1.x -> 2.x </summary>
 
-1. **Everything has been moved from `SJ` to `BX.SJ` namespace**
+1. **Everything has been moved from `SJ` to `BX.SJ` namespace.**
 ```cs
 using SJ;    // ❌
 using BX.SJ; // ✅
@@ -343,7 +364,7 @@ static void Process(SJReader reader, SJReader.Value v)
         case SJType.Array:
             while (reader.IterateArray(v, out var av)) 
             {
-                Process(reader, v);
+                Process(reader, av);
             }
             break;
     }
@@ -369,7 +390,7 @@ for (var root = reader.Read(); !reader.ended; root = reader.Read())
 {
     // ✅ : Discard comments when interacting with code that disallow or not expect it
     if (root.type == SJType.Comment) continue;
-    ReadPos(reader, root);
+    Process(reader, root);
 }
 ```
 
@@ -385,14 +406,14 @@ protected override ReadOnlySpan<char> Slice(int start, int length); /* → */ pu
 public override bool CanReadData => true;
 public override string ReadData() => sb.ToString();
 
-// Can clear data on Reset()
+// Clear written data on Reset()
 public override void Reset()
 {
     base.Reset();
     sb.Clear();
 }
 
-// ⚠️ : ToString() should no longer return the data written by the SJWriter, instead it should state if relevant.
+// ⚠️ : ToString() should no longer return the data written by the SJWriter, instead it should return state if relevant.
 // ❌ : public override string ToString() { return ReadData(); }
 ```
 
@@ -408,7 +429,7 @@ writer.WriteCommentLine("This is a comment that starts with //!");
 // can "false assert" that. **However it won't capture any indirect way of writing comments, so be careful!**
 ```
 
-6. Unit tests have been changed to support custom `SJReader` and `SJWriter` classes (for extensions maybe), with more coverage and cases to test.
+6. Unit tests have been changed to support custom `SJReader` and `SJWriter` classes (for extensions in future), with more coverage and cases to test.
 ```cs
 namespace MySJEx.Tests;
 
@@ -443,3 +464,8 @@ From 1.x, everything else is more or less the same, except the inner workings of
 **Note:** However in the future releases, implicit behaviour _could be_ removed. It is recommended to use the new way (with `for`) of iterating objects and arrays.
 
 </details>
+
+## TODO
+* [ ] Port tests to xunit as mstest seems somewhat specific to visual studio and can't be ran headless trivially (2.1.x) <br>
+  This should also improve the tests and place most logic into one manageable place, instead of repeating redundant logic..
+* [ ] Improve performance by reducing redundant branching/bounds checking and manage state slightly better.
